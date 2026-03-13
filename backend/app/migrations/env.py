@@ -9,6 +9,10 @@ from alembic import context
 from app.core.config import settings
 from app.core.database import Base
 
+# Import all models so Alembic can detect them via Base.metadata.
+# Without this, Alembic wouldn't know any tables exist.
+import app.models  # noqa: F401
+
 config = context.config
 
 config.set_main_option("sqlalchemy.url", settings.async_database_url)
