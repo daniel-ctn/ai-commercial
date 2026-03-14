@@ -1,0 +1,77 @@
+/**
+ * ProductCard — reusable card for product grids.
+ *
+ * == Component Composition (same as Next.js) ==
+ *
+ * This is a "presentational" component — it just receives props and renders.
+ * No data fetching, no state. The parent decides what data to pass.
+ *
+ * This pattern works the same in Next.js. The difference is that in
+ * TanStack Router, we use `<Link to={...}>` instead of Next's `<Link href={...}>`.
+ */
+
+import { Link } from '@tanstack/react-router'
+import { Badge } from '#/components/ui/badge'
+import { Card, CardContent, CardFooter } from '#/components/ui/card'
+import type { Product } from '#/lib/types'
+
+interface ProductCardProps {
+  product: Product
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  const isOnSale = product.original_price && product.original_price > product.price
+  const discount = isOnSale
+    ? Math.round((1 - product.price / product.original_price!) * 100)
+    : 0
+
+  return (
+    <Link
+      to="/products/$productId"
+      params={{ productId: product.id }}
+      className="block no-underline"
+    >
+      <Card className="group h-full overflow-hidden transition hover:shadow-lg">
+        {/* Image placeholder */}
+        <div className="relative aspect-square bg-muted">
+          {product.image_url ? (
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-4xl text-muted-foreground/30">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            </div>
+          )}
+          {isOnSale && (
+            <Badge className="absolute left-2 top-2" variant="destructive">
+              -{discount}%
+            </Badge>
+          )}
+        </div>
+
+        <CardContent className="p-4">
+          <p className="mb-1 text-xs text-muted-foreground">
+            {product.shop_name ?? 'Shop'} &middot; {product.category_name ?? 'Category'}
+          </p>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
+            {product.name}
+          </h3>
+        </CardContent>
+
+        <CardFooter className="px-4 pb-4 pt-0">
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
+            {isOnSale && (
+              <span className="text-sm text-muted-foreground line-through">
+                ${product.original_price!.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </CardFooter>
+      </Card>
+    </Link>
+  )
+}

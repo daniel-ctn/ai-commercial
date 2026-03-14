@@ -43,3 +43,9 @@ class ProductResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductDetailResponse(ProductResponse):
+    """Extended response with shop and category names (avoids extra API calls)."""
+    shop_name: str | None = None
+    category_name: str | None = None

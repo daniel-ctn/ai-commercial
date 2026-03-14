@@ -8,8 +8,8 @@ Build a full-stack commercial platform with an AI chatbot (Google Gemini) that h
 
 - [x] Phase 1: Project scaffolding
 - [x] Phase 2: Database models & migrations
-- [ ] Phase 3: Auth system
-- [ ] Phase 4: Core CRUD APIs & pages
+- [x] Phase 3: Auth system
+- [x] Phase 4: Core CRUD APIs & pages
 - [ ] Phase 5: Admin dashboard
 - [ ] Phase 6: AI Chatbot
 - [ ] Phase 7: Product comparison
@@ -228,19 +228,23 @@ The AI will receive the tool results and formulate natural-language responses wi
 - Create Alembic migration scripts
 - Seed script with sample data for development
 
-### Phase 3: Auth System
+### Phase 3: Auth System (DONE)
 
 - Backend: JWT auth with password hashing, login/register endpoints, Google OAuth flow
-- Backend: Redis-backed session management and rate limiting
-- Frontend: Auth pages (login, register), auth context/hooks, protected routes
+- Backend: Redis-backed session management (token blacklisting) and rate limiting middleware
+- Frontend: API client with auto-refresh, auth hooks (useAuth, useLogin, useRegister, useLogout)
+- Frontend: Auth pages (login, register, Google OAuth callback), UserMenu component
 
-### Phase 4: Core CRUD APIs & Pages
+### Phase 4: Core CRUD APIs & Pages (DONE)
 
 - Backend: Product, Shop, Coupon, Category CRUD APIs with filtering/pagination
-- Frontend: Product listing page with filters (category, price, shop)
-- Frontend: Product detail page
-- Frontend: Shop listing and detail pages
-- Frontend: Deals/coupons page
+- Backend: Ownership authorization, pagination envelope, eager loading
+- Frontend: Shared types, query hooks, API client integration
+- Frontend: Product listing page with filters (category, price, shop, on_sale, search)
+- Frontend: Product detail page with breadcrumbs and specs
+- Frontend: Shop listing and detail pages (with inline coupons and products)
+- Frontend: Deals/coupons page (active coupons + on-sale products)
+- Frontend: Updated Header navigation (Products, Shops, Deals)
 
 ### Phase 5: Admin Dashboard
 

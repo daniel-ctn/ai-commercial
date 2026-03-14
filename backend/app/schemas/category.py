@@ -24,3 +24,8 @@ class CategoryResponse(BaseModel):
     parent_id: uuid.UUID | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CategoryWithChildren(CategoryResponse):
+    """Category with nested children — used for hierarchical listings."""
+    children: list["CategoryWithChildren"] = []

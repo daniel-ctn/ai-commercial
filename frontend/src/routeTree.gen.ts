@@ -9,9 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as DealsRouteImport } from './routes/deals'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShopsIndexRouteImport } from './routes/shops/index'
+import { Route as ProductsIndexRouteImport } from './routes/products/index'
+import { Route as ShopsShopIdRouteImport } from './routes/shops/$shopId'
+import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
+import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
+const DealsRoute = DealsRouteImport.update({
+  id: '/deals',
+  path: '/deals',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -22,35 +35,140 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShopsIndexRoute = ShopsIndexRouteImport.update({
+  id: '/shops/',
+  path: '/shops/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsIndexRoute = ProductsIndexRouteImport.update({
+  id: '/products/',
+  path: '/products/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShopsShopIdRoute = ShopsShopIdRouteImport.update({
+  id: '/shops/$shopId',
+  path: '/shops/$shopId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/products/$productId',
+  path: '/products/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/auth/register',
+  path: '/auth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
+  id: '/auth/google/callback',
+  path: '/auth/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/deals': typeof DealsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/shops/$shopId': typeof ShopsShopIdRoute
+  '/products/': typeof ProductsIndexRoute
+  '/shops/': typeof ShopsIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/deals': typeof DealsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/shops/$shopId': typeof ShopsShopIdRoute
+  '/products': typeof ProductsIndexRoute
+  '/shops': typeof ShopsIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/deals': typeof DealsRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
+  '/products/$productId': typeof ProductsProductIdRoute
+  '/shops/$shopId': typeof ShopsShopIdRoute
+  '/products/': typeof ProductsIndexRoute
+  '/shops/': typeof ShopsIndexRoute
+  '/auth/google/callback': typeof AuthGoogleCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/deals'
+    | '/auth/login'
+    | '/auth/register'
+    | '/products/$productId'
+    | '/shops/$shopId'
+    | '/products/'
+    | '/shops/'
+    | '/auth/google/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to:
+    | '/'
+    | '/about'
+    | '/deals'
+    | '/auth/login'
+    | '/auth/register'
+    | '/products/$productId'
+    | '/shops/$shopId'
+    | '/products'
+    | '/shops'
+    | '/auth/google/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/deals'
+    | '/auth/login'
+    | '/auth/register'
+    | '/products/$productId'
+    | '/shops/$shopId'
+    | '/products/'
+    | '/shops/'
+    | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  DealsRoute: typeof DealsRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
+  ShopsShopIdRoute: typeof ShopsShopIdRoute
+  ProductsIndexRoute: typeof ProductsIndexRoute
+  ShopsIndexRoute: typeof ShopsIndexRoute
+  AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/deals': {
+      id: '/deals'
+      path: '/deals'
+      fullPath: '/deals'
+      preLoaderRoute: typeof DealsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -65,12 +183,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shops/': {
+      id: '/shops/'
+      path: '/shops'
+      fullPath: '/shops/'
+      preLoaderRoute: typeof ShopsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/': {
+      id: '/products/'
+      path: '/products'
+      fullPath: '/products/'
+      preLoaderRoute: typeof ProductsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shops/$shopId': {
+      id: '/shops/$shopId'
+      path: '/shops/$shopId'
+      fullPath: '/shops/$shopId'
+      preLoaderRoute: typeof ShopsShopIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products/$productId': {
+      id: '/products/$productId'
+      path: '/products/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/google/callback': {
+      id: '/auth/google/callback'
+      path: '/auth/google/callback'
+      fullPath: '/auth/google/callback'
+      preLoaderRoute: typeof AuthGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  DealsRoute: DealsRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthRegisterRoute: AuthRegisterRoute,
+  ProductsProductIdRoute: ProductsProductIdRoute,
+  ShopsShopIdRoute: ShopsShopIdRoute,
+  ProductsIndexRoute: ProductsIndexRoute,
+  ShopsIndexRoute: ShopsIndexRoute,
+  AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
