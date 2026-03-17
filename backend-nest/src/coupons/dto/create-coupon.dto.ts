@@ -6,7 +6,6 @@ import {
   IsDateString,
   IsIn,
   Min,
-  Max,
   MinLength,
   MaxLength,
   Validate,
@@ -19,10 +18,29 @@ import {
 class IsAfterValidFrom implements ValidatorConstraintInterface {
   validate(validUntil: string, args: ValidationArguments) {
     const obj = args.object as CreateCouponDto;
+    if (!obj.valid_from) {
+      return true;
+    }
     return new Date(validUntil) > new Date(obj.valid_from);
   }
   defaultMessage() {
     return 'valid_until must be after valid_from';
+  }
+}
+
+@ValidatorConstraint({ name: 'discountValueMatchesType', async: false })
+class DiscountValueMatchesType implements ValidatorConstraintInterface {
+  validate(discountValue: number, args: ValidationArguments) {
+    const obj = args.object as CreateCouponDto;
+    if (obj.discount_type !== 'percentage') {
+      return true;
+    }
+
+    return discountValue <= 100;
+  }
+
+  defaultMessage() {
+    return 'discount_value cannot exceed 100 for percentage type';
   }
 }
 
@@ -45,7 +63,7 @@ export class CreateCouponDto {
 
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01, { message: 'discount_value must be greater than 0' })
-  @Max(100, { message: 'discount_value cannot exceed 100 for percentage type' })
+  @Validate(DiscountValueMatchesType)
   discount_value: number;
 
   @IsOptional()

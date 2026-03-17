@@ -7,6 +7,14 @@
 >
 > Each feature includes explanations comparing backend patterns to familiar Next.js/React concepts (e.g., NestJS modules ≈ Next.js route groups, FastAPI dependencies ≈ React context, decorators ≈ higher-order components). Code comments and docs explain the *why* behind backend patterns like dependency injection, guards/middleware, interceptors, and ORM relationships.
 
+> **⚠️ Code Quality & Production Standards — ALWAYS follow these when implementing any feature or making changes:**
+>
+> 1. **Best Practices** — Write clean, production-grade code. Use proper error handling, input validation, type safety, and security patterns (e.g., parameterized queries, httpOnly cookies, `@Exclude()` on sensitive fields, `rel="noopener noreferrer"` on external links).
+> 2. **Optimized & Efficient** — Avoid N+1 queries (use `joinedload`/`leftJoinAndSelect`), use database indexes on FK and filter columns, prefer single consolidated queries over sequential ones, use `React.memo` for list-rendered components, and use controlled inputs that sync with URL state.
+> 3. **Latest Stable Versions** — Always use the latest stable version of every package/framework. Before implementing, verify the current API against up-to-date documentation. Key replacements already made: `PyJWT` (not python-jose — abandoned/CVEs), `bcrypt` directly (not passlib — unmaintained).
+> 4. **No Abandoned Dependencies** — Do not introduce packages that are unmaintained or have known unpatched CVEs. Check maintenance status before adding any new dependency.
+> 5. **Incremental Changes** — Make small, focused changes. Test each change before moving to the next. Do not refactor everything at once.
+
 ## Overview
 
 Build a full-stack commercial platform with an AI chatbot (Google Gemini) that helps users find products, compare products/shops, and discover coupons/sales. Frontend uses TanStack Start + shadcn/ui. Two backend implementations exist for learning purposes:
@@ -332,7 +340,8 @@ The AI will receive the tool results and formulate natural-language responses wi
 **FastAPI learning notes**:
 - `Depends()` = dependency injection (like React Context — provide once, use everywhere)
 - `OAuth2PasswordBearer` = extracts JWT from request (like reading a cookie in `middleware.ts`)
-- `passlib` / `bcrypt` = password hashing library (same concept as `bcryptjs` in Node)
+- `bcrypt` = password hashing (same concept as `bcryptjs` in Node). Uses `bcrypt.hashpw()` / `bcrypt.checkpw()` directly
+- `PyJWT` = JWT encode/decode (same concept as `jsonwebtoken` in Node). Replaced abandoned `python-jose`
 - Python decorators (`@router.post`) = like TypeScript decorators or HOCs — wrap a function with extra behavior
 
 ### Phase 4: Core CRUD APIs & Pages (DONE)

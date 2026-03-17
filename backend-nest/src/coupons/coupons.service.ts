@@ -1,5 +1,6 @@
 import {
   Injectable,
+  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -55,10 +56,14 @@ export class CouponsService {
   async create(dto: CreateCouponDto, user: User): Promise<Coupon> {
     await this.assertShopOwnership(dto.shop_id, user);
 
+    const validFrom = new Date(dto.valid_from);
+    const validUntil = new Date(dto.valid_until);
+    this.validateCouponRules(dto.discount_type, dto.discount_value, validFrom, validUntil);
+
     const coupon = this.couponsRepo.create({
       ...dto,
-      valid_from: new Date(dto.valid_from),
-      valid_until: new Date(dto.valid_until),
+      valid_from: validFrom,
+      valid_until: validUntil,
     });
     return this.couponsRepo.save(coupon);
   }
@@ -66,6 +71,13 @@ export class CouponsService {
   async update(id: string, dto: UpdateCouponDto, user: User): Promise<Coupon> {
     const coupon = await this.findById(id);
     await this.assertShopOwnership(coupon.shop_id, user);
+
+    const discountType = dto.discount_type ?? coupon.discount_type;
+    const discountValue = dto.discount_value ?? coupon.discount_value;
+    const validFrom = dto.valid_from ? new Date(dto.valid_from) : coupon.valid_from;
+    const validUntil = dto.valid_until ? new Date(dto.valid_until) : coupon.valid_until;
+
+    this.validateCouponRules(discountType, discountValue, validFrom, validUntil);
 
     const { valid_from, valid_until, ...rest } = dto;
     Object.assign(coupon, rest);
@@ -94,6 +106,31 @@ export class CouponsService {
     }
     if (shop.owner_id !== user.id) {
       throw new ForbiddenException('You do not own this shop');
+    }
+  }
+
+  private validateCouponRules(
+    discountType: string,
+    discountValue: number,
+    validFrom: Date,
+    validUntil: Date,
+  ): void {
+    if (discountType === 'percentage' && discountValue > 100) {
+      throw new BadRequestException(
+        'discount_value cannot exceed 100 for percentage type',
+      );
+    }
+
+    if (Number.isNaN(validFrom.getTime())) {
+      throw new BadRequestException('valid_from must be a valid date');
+    }
+
+    if (Number.isNaN(validUntil.getTime())) {
+      throw new BadRequestException('valid_until must be a valid date');
+    }
+
+    if (validUntil <= validFrom) {
+      throw new BadRequestException('valid_until must be after valid_from');
     }
   }
 }

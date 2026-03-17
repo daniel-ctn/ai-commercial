@@ -26,12 +26,11 @@ import {
   CardTitle,
 } from '#/components/ui/card'
 import { Separator } from '#/components/ui/separator'
-import { useLogin } from '#/lib/auth'
+import { useLogin, userQueryOptions } from '#/lib/auth'
 import { api } from '#/lib/api'
 
 export const Route = createFileRoute('/auth/login')({
   beforeLoad: async ({ context }) => {
-    const { userQueryOptions } = await import('#/lib/auth')
     const user = await context.queryClient.ensureQueryData(userQueryOptions())
     if (user) {
       throw redirect({ to: '/' })
@@ -97,7 +96,7 @@ function LoginPage() {
 
             {login.isError && (
               <p className="text-sm text-destructive">
-                {login.error?.message || 'Login failed. Please try again.'}
+                {login.error.message || 'Login failed. Please try again.'}
               </p>
             )}
 

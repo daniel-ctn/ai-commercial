@@ -1,5 +1,7 @@
-import { plainToInstance } from 'class-transformer';
+import { Transform, plainToInstance } from 'class-transformer';
 import {
+  IsBoolean,
+  IsIn,
   IsString,
   IsOptional,
   IsNumber,
@@ -24,6 +26,10 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  APP_NAME?: string;
+
+  @IsOptional()
+  @IsString()
   NODE_ENV?: string;
 
   @IsOptional()
@@ -37,6 +43,33 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   GOOGLE_CLIENT_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
+  COOKIE_DOMAIN?: string;
+
+  @IsOptional()
+  @IsIn(['lax', 'strict', 'none'])
+  COOKIE_SAME_SITE?: 'lax' | 'strict' | 'none';
+
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+
+    if (value.toLowerCase() === 'true') {
+      return true;
+    }
+
+    if (value.toLowerCase() === 'false') {
+      return false;
+    }
+
+    return value;
+  })
+  @IsBoolean()
+  COOKIE_SECURE?: boolean;
 
   @IsOptional()
   @IsString()

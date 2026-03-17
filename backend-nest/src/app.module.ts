@@ -22,6 +22,7 @@ import { ShopsModule } from './shops/shops.module';
 import { ProductsModule } from './products/products.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { AdminModule } from './admin/admin.module';
+import { HealthModule } from './health/health.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -47,6 +48,7 @@ import { validate } from './config/env.validation';
     ProductsModule,
     CouponsModule,
     AdminModule,
+    HealthModule,
   ],
   providers: [
     // Apply rate limiting globally to all routes

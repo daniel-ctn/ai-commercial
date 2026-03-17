@@ -15,11 +15,10 @@ import {
   CardHeader,
   CardTitle,
 } from '#/components/ui/card'
-import { useRegister } from '#/lib/auth'
+import { useRegister, userQueryOptions } from '#/lib/auth'
 
 export const Route = createFileRoute('/auth/register')({
   beforeLoad: async ({ context }) => {
-    const { userQueryOptions } = await import('#/lib/auth')
     const user = await context.queryClient.ensureQueryData(userQueryOptions())
     if (user) {
       throw redirect({ to: '/' })

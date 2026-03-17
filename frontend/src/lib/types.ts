@@ -4,10 +4,10 @@
  * == Why mirror the backend types? ==
  *
  * In Next.js with tRPC or Prisma, types are auto-generated. Since our
- * backend is a separate Python app, we manually define TypeScript types
- * that match the backend Pydantic schemas.
+ * backend is a separate NestJS service, we manually define TypeScript types
+ * that match the API response shapes.
  *
- * Keep these in sync with backend/app/schemas/*.py
+ * Keep these in sync with backend-nest/src/* DTOs and serialized entities.
  */
 
 // ── Pagination ──────────────────────────────────────────────────

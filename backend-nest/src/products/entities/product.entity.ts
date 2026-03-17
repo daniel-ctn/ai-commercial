@@ -19,6 +19,7 @@ import {
 } from 'typeorm';
 import { Shop } from '../../shops/entities/shop.entity';
 import { Category } from '../../categories/entities/category.entity';
+import { numericTransformer } from '../../database/transformers/numeric.transformer';
 
 @Entity('products')
 @Index('ix_products_shop_id', ['shop_id'])
@@ -41,10 +42,16 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   description: string | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, transformer: numericTransformer })
   price: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
   original_price: number | null;
 
   @Column({ type: 'varchar', length: 500, nullable: true })

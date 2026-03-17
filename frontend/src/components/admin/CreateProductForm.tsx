@@ -3,8 +3,11 @@ import { useQuery } from '@tanstack/react-query'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
-import { useCreateProduct, adminShopsQueryOptions } from '#/lib/queries'
-import { categoriesQueryOptions } from '#/lib/queries'
+import {
+  adminShopsQueryOptions,
+  categoriesQueryOptions,
+  useCreateProduct,
+} from '#/lib/queries'
 
 interface CreateProductFormProps {
   onClose: () => void

@@ -43,6 +43,14 @@ class ApiError extends Error {
 
 let refreshPromise: Promise<boolean> | null = null
 
+function normalizeHeaders(headers?: HeadersInit): Record<string, string> {
+  if (!headers) {
+    return {}
+  }
+
+  return Object.fromEntries(new Headers(headers).entries())
+}
+
 async function request<T>(
   endpoint: string,
   options: FetchOptions = {},
@@ -51,7 +59,7 @@ async function request<T>(
   const { body, headers: customHeaders, ...rest } = options
 
   const headers: Record<string, string> = {
-    ...((customHeaders as Record<string, string>) || {}),
+    ...normalizeHeaders(customHeaders),
   }
 
   if (body !== undefined) {

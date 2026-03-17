@@ -25,6 +25,7 @@ import { ConfigService } from '@nestjs/config';
           type: 'postgres' as const,
           url: config.getOrThrow<string>('DATABASE_URL'),
           ssl: { rejectUnauthorized: isProduction },
+          uuidExtension: 'pgcrypto' as const,
           autoLoadEntities: true,
           synchronize: false,
           logging: config.get('DEBUG') === 'true',

@@ -15,6 +15,7 @@ import {
   Index,
 } from 'typeorm';
 import { Shop } from '../../shops/entities/shop.entity';
+import { numericTransformer } from '../../database/transformers/numeric.transformer';
 
 @Entity('coupons')
 @Index('ix_coupons_shop_id', ['shop_id'])
@@ -36,10 +37,16 @@ export class Coupon {
   @Column({ type: 'varchar', length: 20 })
   discount_type: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, transformer: numericTransformer })
   discount_value: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: numericTransformer,
+  })
   min_purchase: number | null;
 
   @Column({ type: 'timestamptz' })

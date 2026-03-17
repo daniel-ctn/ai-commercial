@@ -13,6 +13,7 @@
  * and delegates business logic to AuthService.
  */
 import {
+  BadRequestException,
   Controller,
   Post,
   Get,
@@ -22,10 +23,12 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  NotImplementedException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Response, Request } from 'express';
+import { type CookieOptions, Response, Request } from 'express';
+import { randomBytes } from 'node:crypto';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -34,6 +37,9 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 
+const OAUTH_STATE_COOKIE = 'oauth_state';
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -41,22 +47,48 @@ export class AuthController {
     private readonly config: ConfigService,
   ) {}
 
-  private setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
+  private getBaseCookieOptions(): CookieOptions {
     const isProduction = this.config.get('NODE_ENV') === 'production';
+    const sameSite = this.config.get<'lax' | 'strict' | 'none'>(
+      'COOKIE_SAME_SITE',
+      'lax',
+    );
+    const secure =
+      (this.config.get<boolean>('COOKIE_SECURE') ?? isProduction) || sameSite === 'none';
+    const domain = this.config.get<string>('COOKIE_DOMAIN');
+
+    return {
+      httpOnly: true,
+      secure,
+      sameSite,
+      path: '/',
+      ...(domain ? { domain } : {}),
+    };
+  }
+
+  private setTokenCookies(res: Response, accessToken: string, refreshToken: string) {
+    const baseCookieOptions = this.getBaseCookieOptions();
 
     res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      ...baseCookieOptions,
       maxAge: this.config.get('ACCESS_TOKEN_EXPIRE_MINUTES', 30) * 60 * 1000,
     });
 
     res.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      ...baseCookieOptions,
       maxAge: this.config.get('REFRESH_TOKEN_EXPIRE_DAYS', 7) * 24 * 60 * 60 * 1000,
     });
+  }
+
+  private setOAuthStateCookie(res: Response, state: string) {
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      ...this.getBaseCookieOptions(),
+      maxAge: OAUTH_STATE_TTL_MS,
+    });
+  }
+
+  private clearOAuthStateCookie(res: Response) {
+    res.clearCookie(OAUTH_STATE_COOKIE, this.getBaseCookieOptions());
   }
 
   private toUserResponse(user: User) {
@@ -103,23 +135,15 @@ export class AuthController {
     const accessToken = req.cookies?.['access_token'];
     const refreshToken = req.cookies?.['refresh_token'];
 
-    if (accessToken) {
-      const expireMinutes = this.config.get('ACCESS_TOKEN_EXPIRE_MINUTES', 30);
-      await this.authService.blacklistToken(accessToken, expireMinutes * 60);
-    }
-    if (refreshToken) {
-      const expireDays = this.config.get('REFRESH_TOKEN_EXPIRE_DAYS', 7);
-      await this.authService.blacklistToken(refreshToken, expireDays * 24 * 3600);
-    }
+    await Promise.all([
+      accessToken ? this.authService.revokeToken(accessToken) : Promise.resolve(),
+      refreshToken ? this.authService.revokeToken(refreshToken) : Promise.resolve(),
+    ]);
 
-    const isProduction = this.config.get('NODE_ENV') === 'production';
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax' as const,
-    };
+    const cookieOptions = this.getBaseCookieOptions();
     res.clearCookie('access_token', cookieOptions);
     res.clearCookie('refresh_token', cookieOptions);
+    this.clearOAuthStateCookie(res);
   }
 
   @Post('refresh')
@@ -145,19 +169,25 @@ export class AuthController {
   }
 
   @Get('google')
-  getGoogleUrl() {
+  getGoogleUrl(@Res({ passthrough: true }) res: Response) {
     const clientId = this.config.get('GOOGLE_CLIENT_ID');
     if (!clientId) {
-      return { detail: 'Google OAuth not configured' };
+      throw new NotImplementedException('Google OAuth not configured');
     }
 
     const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000');
-    const redirectUri = `${frontendUrl}/auth/google/callback`;
-    const scope = encodeURIComponent('openid email profile');
-    const url =
-      `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${clientId}&redirect_uri=${redirectUri}` +
-      `&response_type=code&scope=${scope}&access_type=offline`;
+    const state = randomBytes(32).toString('hex');
+    this.setOAuthStateCookie(res, state);
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: `${frontendUrl}/auth/google/callback`,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      state,
+    });
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     return { url };
   }
@@ -166,30 +196,47 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async googleCallback(
     @Body() dto: GoogleCallbackDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const clientId = this.config.get('GOOGLE_CLIENT_ID');
     const clientSecret = this.config.get('GOOGLE_CLIENT_SECRET');
     const frontendUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000');
+    const expectedState = req.cookies?.[OAUTH_STATE_COOKIE];
+
+    this.clearOAuthStateCookie(res);
+
+    if (!clientId || !clientSecret) {
+      throw new NotImplementedException('Google OAuth not configured');
+    }
+    if (!expectedState || expectedState !== dto.state) {
+      throw new UnauthorizedException('Invalid OAuth state');
+    }
 
     // Exchange code for tokens with Google
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Accept: 'application/json',
+      },
+      body: new URLSearchParams({
         code: dto.code,
         client_id: clientId,
         client_secret: clientSecret,
         redirect_uri: `${frontendUrl}/auth/google/callback`,
         grant_type: 'authorization_code',
-      }),
+      }).toString(),
     });
 
     if (!tokenRes.ok) {
       throw new UnauthorizedException('Google OAuth failed');
     }
 
-    const tokenData = await tokenRes.json();
+    const tokenData = (await tokenRes.json()) as { access_token?: string };
+    if (!tokenData.access_token) {
+      throw new BadRequestException('Google did not return an access token');
+    }
 
     const userInfoRes = await fetch(
       'https://www.googleapis.com/oauth2/v2/userinfo',
@@ -207,7 +254,7 @@ export class AuthController {
     const googleUser = await userInfoRes.json();
     const user = await this.authService.getOrCreateOAuthUser(
       googleUser.email,
-      googleUser.name,
+      googleUser.name ?? googleUser.email,
       'google',
       googleUser.id,
     );

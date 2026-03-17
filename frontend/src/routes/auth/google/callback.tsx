@@ -29,42 +29,51 @@ import { api, ApiError } from '#/lib/api'
 
 interface GoogleCallbackSearch {
   code?: string
+  state?: string
   error?: string
+  error_description?: string
 }
 
 export const Route = createFileRoute('/auth/google/callback')({
   validateSearch: (search: Record<string, unknown>): GoogleCallbackSearch => ({
     code: search.code as string | undefined,
+    state: search.state as string | undefined,
     error: search.error as string | undefined,
+    error_description: search.error_description as string | undefined,
   }),
   component: GoogleCallback,
 })
 
 function GoogleCallback() {
-  const { code, error: oauthError } = Route.useSearch()
+  const {
+    code,
+    state,
+    error: oauthError,
+    error_description: errorDescription,
+  } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const hasRun = useRef(false)
   const [error, setError] = useState<string | null>(
-    oauthError ? 'Google sign-in was denied or failed.' : null,
+    oauthError ? errorDescription || 'Google sign-in was denied or failed.' : null,
   )
 
   useEffect(() => {
     if (hasRun.current) return
     hasRun.current = true
 
-    if (oauthError || !code) {
+    if (oauthError || !code || !state) {
       if (!oauthError) {
-        setError('No authorization code received from Google.')
+        setError(!code ? 'No authorization code received from Google.' : 'Missing OAuth state.')
       }
       return
     }
 
     api
-      .post('/auth/google/callback', { code })
+      .post('/auth/google/callback', { code, state })
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['auth'] })
-        navigate({ to: '/' })
+        navigate({ to: '/', replace: true })
       })
       .catch((err) => {
         if (err instanceof ApiError) {
@@ -73,7 +82,7 @@ function GoogleCallback() {
           setError('An unexpected error occurred. Please try again.')
         }
       })
-  }, [code, oauthError, navigate, queryClient])
+  }, [code, errorDescription, oauthError, navigate, queryClient, state])
 
   if (error) {
     return (

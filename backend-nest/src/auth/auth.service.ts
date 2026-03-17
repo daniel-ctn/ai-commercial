@@ -25,6 +25,12 @@ import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
+type JwtPayload = {
+  sub: string;
+  type: 'access' | 'refresh';
+  exp?: number;
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -86,15 +92,40 @@ export class AuthService {
     await this.redis.set(`blacklist:${token}`, '1', ttlSeconds);
   }
 
+  async revokeToken(token: string): Promise<void> {
+    const ttlSeconds = this.getRemainingTtlSeconds(token);
+    if (ttlSeconds > 0) {
+      await this.blacklistToken(token, ttlSeconds);
+    }
+  }
+
+  async isTokenBlacklisted(token: string): Promise<boolean> {
+    return this.redis.exists(`blacklist:${token}`);
+  }
+
   async refreshTokens(refreshToken: string) {
     try {
-      const payload = this.jwtService.verify(refreshToken);
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken);
       if (payload.type !== 'refresh') {
         throw new UnauthorizedException();
       }
 
       const user = await this.usersService.findById(payload.sub);
       if (!user) {
+        throw new UnauthorizedException();
+      }
+
+      const ttlSeconds = this.getRemainingTtlSeconds(refreshToken);
+      if (ttlSeconds <= 0) {
+        throw new UnauthorizedException();
+      }
+
+      const wasReserved = await this.redis.setIfAbsent(
+        `blacklist:${refreshToken}`,
+        '1',
+        ttlSeconds,
+      );
+      if (!wasReserved) {
         throw new UnauthorizedException();
       }
 
@@ -140,5 +171,25 @@ export class AuthService {
       oauth_provider: provider,
       oauth_id: oauthId,
     });
+  }
+
+  private getRemainingTtlSeconds(token: string): number {
+    const payload = this.decodeTokenIgnoringExpiration(token);
+    if (!payload?.exp) {
+      return 0;
+    }
+
+    const ttlSeconds = Math.ceil(payload.exp - Date.now() / 1000);
+    return Math.max(ttlSeconds, 0);
+  }
+
+  private decodeTokenIgnoringExpiration(token: string): JwtPayload | null {
+    try {
+      return this.jwtService.verify<JwtPayload>(token, {
+        ignoreExpiration: true,
+      });
+    } catch {
+      return null;
+    }
   }
 }

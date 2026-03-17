@@ -58,4 +58,17 @@ export class RedisService implements OnModuleDestroy {
     const result = await this.client.exists(key);
     return result === 1;
   }
+
+  async setIfAbsent(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
+  async ping(): Promise<string> {
+    return this.client.ping();
+  }
 }
