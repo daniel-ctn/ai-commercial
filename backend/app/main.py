@@ -60,12 +60,14 @@ from app.api.categories import router as categories_router
 from app.api.shops import router as shops_router
 from app.api.products import router as products_router
 from app.api.coupons import router as coupons_router
+from app.api.admin import router as admin_router
 
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(categories_router, prefix=settings.api_prefix)
 app.include_router(shops_router, prefix=settings.api_prefix)
 app.include_router(products_router, prefix=settings.api_prefix)
 app.include_router(coupons_router, prefix=settings.api_prefix)
+app.include_router(admin_router, prefix=settings.api_prefix)
 
 
 @app.get("/health")

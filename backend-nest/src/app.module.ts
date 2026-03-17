@@ -21,6 +21,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ShopsModule } from './shops/shops.module';
 import { ProductsModule } from './products/products.module';
 import { CouponsModule } from './coupons/coupons.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { CouponsModule } from './coupons/coupons.module';
     ShopsModule,
     ProductsModule,
     CouponsModule,
+    AdminModule,
   ],
   providers: [
     // Apply rate limiting globally to all routes

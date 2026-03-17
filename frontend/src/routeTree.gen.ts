@@ -10,19 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DealsRouteImport } from './routes/deals'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShopsIndexRouteImport } from './routes/shops/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops/$shopId'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminShopsRouteImport } from './routes/admin/shops'
+import { Route as AdminProductsRouteImport } from './routes/admin/products'
+import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
 const DealsRoute = DealsRouteImport.update({
   id: '/deals',
   path: '/deals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -45,6 +56,11 @@ const ProductsIndexRoute = ProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ShopsShopIdRoute = ShopsShopIdRouteImport.update({
   id: '/shops/$shopId',
   path: '/shops/$shopId',
@@ -65,6 +81,26 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopsRoute = AdminShopsRouteImport.update({
+  id: '/admin/shops',
+  path: '/shops',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProductsRoute = AdminProductsRouteImport.update({
+  id: '/admin/products',
+  path: '/products',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCouponsRoute = AdminCouponsRouteImport.update({
+  id: '/admin/coupons',
+  path: '/coupons',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
   id: '/auth/google/callback',
   path: '/auth/google/callback',
@@ -74,7 +110,13 @@ const AuthGoogleCallbackRoute = AuthGoogleCallbackRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/deals': typeof DealsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/coupons': typeof AdminCouponsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/shops': typeof AdminShopsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -87,6 +129,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/deals': typeof DealsRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/coupons': typeof AdminCouponsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/shops': typeof AdminShopsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -99,7 +146,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/deals': typeof DealsRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/coupons': typeof AdminCouponsRoute
+  '/admin/products': typeof AdminProductsRoute
+  '/admin/shops': typeof AdminShopsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/products/$productId': typeof ProductsProductIdRoute
@@ -113,7 +166,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/deals'
+    | '/admin/'
+    | '/admin/coupons'
+    | '/admin/products'
+    | '/admin/shops'
+    | '/admin/users'
     | '/auth/login'
     | '/auth/register'
     | '/products/$productId'
@@ -126,6 +185,11 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/deals'
+    | '/admin'
+    | '/admin/coupons'
+    | '/admin/products'
+    | '/admin/shops'
+    | '/admin/users'
     | '/auth/login'
     | '/auth/register'
     | '/products/$productId'
@@ -137,7 +201,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/deals'
+    | '/admin/'
+    | '/admin/coupons'
+    | '/admin/products'
+    | '/admin/shops'
+    | '/admin/users'
     | '/auth/login'
     | '/auth/register'
     | '/products/$productId'
@@ -147,9 +217,27 @@ export interface FileRouteTypes {
     | '/auth/google/callback'
   fileRoutesById: FileRoutesById
 }
+
+export interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminCouponsRoute: typeof AdminCouponsRoute
+  AdminProductsRoute: typeof AdminProductsRoute
+  AdminShopsRoute: typeof AdminShopsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminCouponsRoute: AdminCouponsRoute,
+  AdminProductsRoute: AdminProductsRoute,
+  AdminShopsRoute: AdminShopsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+}
+
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   DealsRoute: typeof DealsRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
@@ -167,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/deals'
       fullPath: '/deals'
       preLoaderRoute: typeof DealsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -196,6 +291,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/products/'
       preLoaderRoute: typeof ProductsIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/shops': {
+      id: '/admin/shops'
+      path: '/shops'
+      fullPath: '/admin/shops'
+      preLoaderRoute: typeof AdminShopsRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/products': {
+      id: '/admin/products'
+      path: '/products'
+      fullPath: '/admin/products'
+      preLoaderRoute: typeof AdminProductsRouteImport
+      parentRoute: typeof AdminRouteImport
+    }
+    '/admin/coupons': {
+      id: '/admin/coupons'
+      path: '/coupons'
+      fullPath: '/admin/coupons'
+      preLoaderRoute: typeof AdminCouponsRouteImport
+      parentRoute: typeof AdminRouteImport
     }
     '/shops/$shopId': {
       id: '/shops/$shopId'
@@ -238,6 +368,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute._addFileChildren(AdminRouteChildren),
   DealsRoute: DealsRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,

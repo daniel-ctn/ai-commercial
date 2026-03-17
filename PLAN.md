@@ -24,7 +24,7 @@ Both backends connect to the same **Neon PostgreSQL** database and **Upstash Red
 - [x] Phase 2: Database models & migrations
 - [x] Phase 3: Auth system
 - [x] Phase 4: Core CRUD APIs & pages
-- [ ] Phase 5: Admin dashboard
+- [x] Phase 5: Admin dashboard
 - [ ] Phase 6: AI Chatbot
 - [ ] Phase 7: Product comparison
 - [ ] Phase 8: Polish & production readiness
