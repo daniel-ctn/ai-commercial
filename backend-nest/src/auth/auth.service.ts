@@ -112,6 +112,25 @@ export class AuthService {
   ): Promise<User> {
     const existing = await this.usersService.findByEmail(email);
     if (existing) {
+      if (
+        existing.oauth_provider === provider &&
+        existing.oauth_id === oauthId
+      ) {
+        return existing;
+      }
+
+      if (existing.oauth_provider && existing.oauth_provider !== provider) {
+        throw new ConflictException(
+          `This email is already linked to a different OAuth provider`,
+        );
+      }
+
+      if (!existing.oauth_provider && existing.password_hash) {
+        throw new ConflictException(
+          `An account with this email already exists. Please log in with your password.`,
+        );
+      }
+
       return existing;
     }
 

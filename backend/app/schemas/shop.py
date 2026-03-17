@@ -3,21 +3,21 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 class ShopCreate(BaseModel):
-    name: str
-    description: str | None = None
-    logo_url: str | None = None
-    website: str | None = None
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    logo_url: HttpUrl | None = None
+    website: HttpUrl | None = None
 
 
 class ShopUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    logo_url: str | None = None
-    website: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    logo_url: HttpUrl | None = None
+    website: HttpUrl | None = None
     is_active: bool | None = None
 
 

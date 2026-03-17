@@ -74,7 +74,7 @@ function ShopDetailPage() {
             <a
               href={shop.website}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="mt-1 inline-block text-sm"
             >
               {shop.website}

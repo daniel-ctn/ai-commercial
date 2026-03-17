@@ -26,6 +26,8 @@ is always running; in Python you have to explicitly launch it.
 """
 
 import asyncio
+import os
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -39,7 +41,10 @@ from app.models import User, Shop, Category, Product, Coupon
 async def seed() -> None:
     """Insert sample data into all tables."""
 
-    # Create tables if they don't exist (safe to run multiple times)
+    if os.getenv("NODE_ENV") == "production" or os.getenv("ENVIRONMENT") == "production":
+        print("ERROR: Seed script cannot run in production. Aborting.")
+        sys.exit(1)
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

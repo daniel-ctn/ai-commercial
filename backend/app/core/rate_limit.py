@@ -27,19 +27,29 @@ Like Express middleware: app.use((req, res, next) => { ... })
 from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from app.core.config import settings
 from app.core.redis import redis_client
+
+SKIP_PATHS = frozenset({
+    "/health",
+    "/health/ready",
+    "/openapi.json",
+    f"{settings.api_prefix}/docs",
+    f"{settings.api_prefix}/redoc",
+})
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    Simple sliding-window rate limiter.
-
-    Args:
-        app: The FastAPI app instance
-        requests_per_window: Max requests allowed per window
-        window_seconds: Window duration in seconds
-    """
-
     def __init__(self, app, requests_per_window: int = 60, window_seconds: int = 60):
         super().__init__(app)
         self.requests_per_window = requests_per_window
@@ -48,29 +58,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
-        # Skip rate limiting for health checks and docs
-        if request.url.path in ("/health", f"/api/v1/docs", f"/api/v1/redoc", "/openapi.json"):
+        if request.url.path in SKIP_PATHS:
             return await call_next(request)
 
-        # Identify the client by IP address
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = _get_client_ip(request)
 
-        # Stricter limits for auth endpoints (prevent brute force)
         if "/auth/login" in request.url.path or "/auth/register" in request.url.path:
             key = f"rate_limit:auth:{client_ip}"
-            max_requests = 10  # 10 auth attempts per minute
+            max_requests = 10
         else:
             key = f"rate_limit:{client_ip}"
             max_requests = self.requests_per_window
 
+        current = 0
         try:
-            # Increment the counter for this IP
-            # INCR atomically increments and returns the new value
-            current = redis_client.incr(key)
+            current = await redis_client.incr(key)
 
-            # If this is the first request in the window, set the expiry
             if current == 1:
-                redis_client.expire(key, self.window_seconds)
+                await redis_client.expire(key, self.window_seconds)
 
             if current > max_requests:
                 return Response(
@@ -79,18 +84,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     media_type="application/json",
                 )
         except Exception:
-            # If Redis is down, don't block requests — fail open
-            # (better to serve users than to deny everyone)
             pass
 
         response = await call_next(request)
 
-        # Add rate limit headers so the frontend knows the limits
-        try:
-            remaining = max(0, max_requests - (current if 'current' in dir() else 0))
-            response.headers["X-RateLimit-Limit"] = str(max_requests)
-            response.headers["X-RateLimit-Remaining"] = str(remaining)
-        except Exception:
-            pass
+        remaining = max(0, max_requests - current)
+        response.headers["X-RateLimit-Limit"] = str(max_requests)
+        response.headers["X-RateLimit-Remaining"] = str(remaining)
 
         return response

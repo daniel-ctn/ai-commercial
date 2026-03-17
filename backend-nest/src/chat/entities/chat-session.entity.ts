@@ -6,11 +6,13 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { ChatMessage } from './chat-message.entity';
 
 @Entity('chat_sessions')
+@Index('ix_chat_sessions_user_id', ['user_id'])
 export class ChatSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -21,10 +23,10 @@ export class ChatSession {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @OneToMany(() => ChatMessage, (msg) => msg.session)
+  @OneToMany(() => ChatMessage, (msg) => msg.session, { cascade: true })
   messages: ChatMessage[];
 }

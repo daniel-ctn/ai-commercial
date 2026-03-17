@@ -15,10 +15,9 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { Shop } from './entities/shop.entity';
 import { User } from '../users/entities/user.entity';
-import { UsersService } from '../users/users.service';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { QueryShopsDto } from './dto/query-shops.dto';
@@ -29,7 +28,7 @@ export class ShopsService {
   constructor(
     @InjectRepository(Shop)
     private readonly shopsRepo: Repository<Shop>,
-    private readonly usersService: UsersService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(query: QueryShopsDto): Promise<PaginatedResponse<Shop>> {
@@ -60,19 +59,20 @@ export class ShopsService {
   }
 
   async create(dto: CreateShopDto, user: User): Promise<Shop> {
-    const shop = this.shopsRepo.create({
-      ...dto,
-      owner_id: user.id,
+    return this.dataSource.transaction(async (manager) => {
+      const shop = manager.create(Shop, {
+        ...dto,
+        owner_id: user.id,
+      });
+
+      const saved = await manager.save(shop);
+
+      if (user.role === 'user') {
+        await manager.update(User, user.id, { role: 'shop_admin' });
+      }
+
+      return saved;
     });
-
-    const saved = await this.shopsRepo.save(shop);
-
-    // Upgrade user role to shop_admin if currently a regular user
-    if (user.role === 'user') {
-      await this.usersService.updateRole(user.id, 'shop_admin');
-    }
-
-    return saved;
   }
 
   async update(id: string, dto: UpdateShopDto, user: User): Promise<Shop> {

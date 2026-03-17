@@ -67,12 +67,12 @@ export class CouponsService {
     const coupon = await this.findById(id);
     await this.assertShopOwnership(coupon.shop_id, user);
 
-    const updateData: Partial<Coupon> = { ...dto } as Partial<Coupon>;
-    const rawDto = dto as Record<string, unknown>;
-    if (rawDto.valid_from) updateData.valid_from = new Date(rawDto.valid_from as string);
-    if (rawDto.valid_until) updateData.valid_until = new Date(rawDto.valid_until as string);
+    const { valid_from, valid_until, ...rest } = dto;
+    Object.assign(coupon, rest);
 
-    Object.assign(coupon, updateData);
+    if (valid_from) coupon.valid_from = new Date(valid_from);
+    if (valid_until) coupon.valid_until = new Date(valid_until);
+
     return this.couponsRepo.save(coupon);
   }
 

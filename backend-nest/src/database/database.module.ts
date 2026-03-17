@@ -19,16 +19,21 @@ import { ConfigService } from '@nestjs/config';
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.getOrThrow<string>('DATABASE_URL'),
-        ssl: { rejectUnauthorized: false },
-        autoLoadEntities: true,
-        // synchronize: false — NEVER true in production!
-        // Use migrations instead (like prisma migrate)
-        synchronize: false,
-        logging: config.get('DEBUG') === 'true',
-      }),
+      useFactory: (config: ConfigService) => {
+        const isProduction = config.get('NODE_ENV') === 'production';
+        return {
+          type: 'postgres' as const,
+          url: config.getOrThrow<string>('DATABASE_URL'),
+          ssl: { rejectUnauthorized: isProduction },
+          autoLoadEntities: true,
+          synchronize: false,
+          logging: config.get('DEBUG') === 'true',
+          extra: {
+            max: config.get<number>('DB_POOL_MAX', 10),
+            min: config.get<number>('DB_POOL_MIN', 2),
+          },
+        };
+      },
     }),
   ],
 })

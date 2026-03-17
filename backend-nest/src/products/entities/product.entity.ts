@@ -15,11 +15,16 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Shop } from '../../shops/entities/shop.entity';
 import { Category } from '../../categories/entities/category.entity';
 
 @Entity('products')
+@Index('ix_products_shop_id', ['shop_id'])
+@Index('ix_products_category_id', ['category_id'])
+@Index('ix_products_is_active', ['is_active'])
+@Index('ix_products_active_category', ['is_active', 'category_id'])
 export class Product {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -54,11 +59,11 @@ export class Product {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @ManyToOne(() => Shop, (shop) => shop.products)
+  @ManyToOne(() => Shop, (shop) => shop.products, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
 
-  @ManyToOne(() => Category, (category) => category.products)
+  @ManyToOne(() => Category, (category) => category.products, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'category_id' })
   category: Category;
 }

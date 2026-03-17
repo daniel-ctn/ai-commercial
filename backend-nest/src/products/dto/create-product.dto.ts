@@ -7,6 +7,7 @@ import {
   IsObject,
   Min,
   MinLength,
+  MaxLength,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -18,10 +19,12 @@ export class CreateProductDto {
 
   @IsString()
   @MinLength(1)
+  @MaxLength(255)
   name: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   description?: string;
 
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -34,7 +37,7 @@ export class CreateProductDto {
   original_price?: number;
 
   @IsOptional()
-  @IsUrl()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   image_url?: string;
 
   @IsOptional()

@@ -20,6 +20,7 @@
  *   - SSR-friendly (filters are in the URL, not in memory)
  */
 
+import { useState, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '#/components/ui/button'
@@ -55,6 +56,16 @@ function ProductsPage() {
   const filters = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
+  const [searchInput, setSearchInput] = useState(filters.search ?? '')
+  const [minPriceInput, setMinPriceInput] = useState(filters.min_price?.toString() ?? '')
+  const [maxPriceInput, setMaxPriceInput] = useState(filters.max_price?.toString() ?? '')
+
+  useEffect(() => {
+    setSearchInput(filters.search ?? '')
+    setMinPriceInput(filters.min_price?.toString() ?? '')
+    setMaxPriceInput(filters.max_price?.toString() ?? '')
+  }, [filters.search, filters.min_price, filters.max_price])
+
   const { data, isLoading } = useQuery(
     productsQueryOptions({
       page: filters.page || 1,
@@ -74,7 +85,7 @@ function ProductsPage() {
       search: (prev) => ({
         ...prev,
         ...updates,
-        page: updates.page ?? 1, // Reset to page 1 when filters change
+        page: updates.page ?? 1,
       }),
     })
   }
@@ -88,10 +99,11 @@ function ProductsPage() {
         <Input
           placeholder="Search products..."
           className="w-full sm:w-64"
-          defaultValue={filters.search ?? ''}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              updateFilters({ search: e.currentTarget.value || undefined })
+              updateFilters({ search: searchInput || undefined })
             }
           }}
         />
@@ -124,10 +136,11 @@ function ProductsPage() {
           type="number"
           placeholder="Min $"
           className="w-24"
-          defaultValue={filters.min_price ?? ''}
+          value={minPriceInput}
+          onChange={(e) => setMinPriceInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              const val = Number(e.currentTarget.value)
+              const val = Number(minPriceInput)
               updateFilters({ min_price: val || undefined })
             }
           }}
@@ -136,10 +149,11 @@ function ProductsPage() {
           type="number"
           placeholder="Max $"
           className="w-24"
-          defaultValue={filters.max_price ?? ''}
+          value={maxPriceInput}
+          onChange={(e) => setMaxPriceInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              const val = Number(e.currentTarget.value)
+              const val = Number(maxPriceInput)
               updateFilters({ max_price: val || undefined })
             }
           }}

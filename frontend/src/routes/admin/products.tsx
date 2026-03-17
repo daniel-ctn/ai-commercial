@@ -20,14 +20,22 @@ function AdminProductsPage() {
   const toggleActive = useToggleProductActive()
   const deleteProduct = useDeleteProduct()
 
+  const mutationError = toggleActive.error || deleteProduct.error
+
   return (
     <div>
+      {mutationError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          {mutationError instanceof Error ? mutationError.message : 'Action failed. Please try again.'}
+        </div>
+      )}
       {showCreate && <CreateProductForm onClose={() => setShowCreate(false)} />}
       <AdminDataTable<AdminProduct>
         title="Products"
         subtitle="Manage all products across all shops"
         data={data?.items}
         isLoading={isLoading}
+        getRowKey={(p) => p.id}
         page={page}
         totalPages={data?.pages ?? 0}
         total={data?.total ?? 0}

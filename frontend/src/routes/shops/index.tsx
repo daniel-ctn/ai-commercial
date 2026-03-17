@@ -2,6 +2,7 @@
  * Shop listing page — /shops
  */
 
+import { useState, useEffect } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Button } from '#/components/ui/button'
@@ -27,6 +28,12 @@ function ShopsPage() {
   const filters = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
 
+  const [searchInput, setSearchInput] = useState(filters.search ?? '')
+
+  useEffect(() => {
+    setSearchInput(filters.search ?? '')
+  }, [filters.search])
+
   const { data, isLoading } = useQuery(
     shopsQueryOptions({
       page: filters.page || 1,
@@ -42,12 +49,13 @@ function ShopsPage() {
         <Input
           placeholder="Search shops..."
           className="w-full sm:w-64"
-          defaultValue={filters.search ?? ''}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               navigate({
                 search: {
-                  search: e.currentTarget.value || undefined,
+                  search: searchInput || undefined,
                   page: 1,
                 },
               })

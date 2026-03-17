@@ -22,6 +22,7 @@ interface AdminDataTableProps<T> {
   title: string
   subtitle?: string
   actions?: React.ReactNode
+  getRowKey?: (item: T, index: number) => string | number
 }
 
 export default function AdminDataTable<T>({
@@ -37,6 +38,7 @@ export default function AdminDataTable<T>({
   title,
   subtitle,
   actions,
+  getRowKey,
 }: AdminDataTableProps<T>) {
   return (
     <div>
@@ -93,7 +95,7 @@ export default function AdminDataTable<T>({
               ) : data && data.length > 0 ? (
                 data.map((item, i) => (
                   <tr
-                    key={i}
+                    key={getRowKey ? getRowKey(item, i) : i}
                     className="border-b border-[var(--line)] transition-colors last:border-0 hover:bg-[var(--surface)]"
                   >
                     {columns.map((col) => (

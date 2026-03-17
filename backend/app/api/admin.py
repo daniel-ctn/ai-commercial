@@ -59,44 +59,43 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(get_current_admin),
 ):
-    """
-    Aggregate stats for the admin dashboard overview.
-
-    Runs multiple COUNT queries in parallel-ish fashion.
-    In a real app you'd cache these with Redis (Phase 8).
-    """
-    total_users = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
-    total_shops = (await db.execute(select(func.count()).select_from(Shop))).scalar() or 0
-    active_shops = (
-        await db.execute(
+    """Aggregate stats for the admin dashboard in a single query."""
+    stats_query = select(
+        func.count(func.distinct(User.id)).label("total_users"),
+        (
+            select(func.count()).select_from(Shop)
+        ).correlate(None).scalar_subquery().label("total_shops"),
+        (
             select(func.count()).select_from(Shop).where(Shop.is_active == True)
-        )
-    ).scalar() or 0
-    total_products = (await db.execute(select(func.count()).select_from(Product))).scalar() or 0
-    active_products = (
-        await db.execute(
+        ).correlate(None).scalar_subquery().label("active_shops"),
+        (
+            select(func.count()).select_from(Product)
+        ).correlate(None).scalar_subquery().label("total_products"),
+        (
             select(func.count()).select_from(Product).where(Product.is_active == True)
-        )
-    ).scalar() or 0
-    total_coupons = (await db.execute(select(func.count()).select_from(Coupon))).scalar() or 0
-    active_coupons = (
-        await db.execute(
+        ).correlate(None).scalar_subquery().label("active_products"),
+        (
+            select(func.count()).select_from(Coupon)
+        ).correlate(None).scalar_subquery().label("total_coupons"),
+        (
             select(func.count()).select_from(Coupon).where(Coupon.is_active == True)
-        )
-    ).scalar() or 0
-    total_categories = (
-        await db.execute(select(func.count()).select_from(Category))
-    ).scalar() or 0
+        ).correlate(None).scalar_subquery().label("active_coupons"),
+        (
+            select(func.count()).select_from(Category)
+        ).correlate(None).scalar_subquery().label("total_categories"),
+    ).select_from(User)
+
+    row = (await db.execute(stats_query)).one()
 
     return AdminStatsResponse(
-        total_users=total_users,
-        total_shops=total_shops,
-        active_shops=active_shops,
-        total_products=total_products,
-        active_products=active_products,
-        total_coupons=total_coupons,
-        active_coupons=active_coupons,
-        total_categories=total_categories,
+        total_users=row.total_users,
+        total_shops=row.total_shops,
+        active_shops=row.active_shops,
+        total_products=row.total_products,
+        active_products=row.active_products,
+        total_coupons=row.total_coupons,
+        active_coupons=row.active_coupons,
+        total_categories=row.total_categories,
     )
 
 

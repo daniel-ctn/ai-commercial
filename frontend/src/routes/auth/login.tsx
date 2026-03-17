@@ -13,7 +13,7 @@
  */
 
 import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, redirect } from '@tanstack/react-router'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
@@ -30,6 +30,13 @@ import { useLogin } from '#/lib/auth'
 import { api } from '#/lib/api'
 
 export const Route = createFileRoute('/auth/login')({
+  beforeLoad: async ({ context }) => {
+    const { userQueryOptions } = await import('#/lib/auth')
+    const user = await context.queryClient.ensureQueryData(userQueryOptions())
+    if (user) {
+      throw redirect({ to: '/' })
+    }
+  },
   component: LoginPage,
 })
 

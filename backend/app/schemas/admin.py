@@ -14,8 +14,11 @@ Next.js — you wouldn't send user emails to the public listing page.
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
+
+VALID_ROLES = ("user", "shop_admin", "admin")
 
 
 class AdminStatsResponse(BaseModel):
@@ -44,7 +47,7 @@ class AdminUserResponse(BaseModel):
 
 class UpdateUserRoleRequest(BaseModel):
     """Request body for changing a user's role."""
-    role: str
+    role: Literal["user", "shop_admin", "admin"]
 
 
 class AdminShopResponse(BaseModel):

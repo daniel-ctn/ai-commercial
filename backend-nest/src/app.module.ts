@@ -22,15 +22,14 @@ import { ShopsModule } from './shops/shops.module';
 import { ProductsModule } from './products/products.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { AdminModule } from './admin/admin.module';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
-    // ConfigModule — loads .env file and makes values injectable
-    // Like next.config.ts env: {} but available everywhere via ConfigService
-    // isGlobal: true means any module can use ConfigService without re-importing
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '../.env',
+      validate,
     }),
 
     // ThrottlerModule — rate limiting (60 requests per 60 seconds)

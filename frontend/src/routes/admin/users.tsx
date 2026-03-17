@@ -30,11 +30,18 @@ function AdminUsersPage() {
   }
 
   return (
+    <div>
+      {updateRole.error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          {updateRole.error instanceof Error ? updateRole.error.message : 'Failed to update role. Please try again.'}
+        </div>
+      )}
     <AdminDataTable<AdminUser>
       title="Users"
       subtitle="Manage platform users and their roles"
       data={data?.items}
       isLoading={isLoading}
+      getRowKey={(u) => u.id}
       page={page}
       totalPages={data?.pages ?? 0}
       total={data?.total ?? 0}
@@ -93,5 +100,6 @@ function AdminUsersPage() {
         },
       ]}
     />
+    </div>
   )
 }

@@ -21,6 +21,7 @@ import {
   CreateDateColumn,
   OneToMany,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Shop } from '../../shops/entities/shop.entity';
 
 @Entity('users')
@@ -31,6 +32,7 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 
+  @Exclude()
   @Column({ type: 'varchar', length: 255, nullable: true })
   password_hash: string | null;
 
@@ -43,6 +45,7 @@ export class User {
   @Column({ type: 'varchar', length: 50, nullable: true })
   oauth_provider: string | null;
 
+  @Exclude()
   @Column({ type: 'varchar', length: 255, nullable: true })
   oauth_id: string | null;
 

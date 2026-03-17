@@ -25,6 +25,7 @@ import { CategoriesService, CategoryWithChildren } from './categories.service';
 import { Category } from './entities/category.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { QueryCategoriesDto } from './dto/query-categories.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 
@@ -34,9 +35,9 @@ export class CategoriesController {
 
   @Get()
   findAll(
-    @Query('flat') flat?: boolean,
+    @Query() query: QueryCategoriesDto,
   ): Promise<Category[] | CategoryWithChildren[]> {
-    return this.categoriesService.findAll(flat ?? false);
+    return this.categoriesService.findAll(query.flat ?? false);
   }
 
   @Get(':id')

@@ -25,6 +25,8 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
+const REQUEST_TIMEOUT_MS = 30_000
+
 type FetchOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
 }
@@ -39,31 +41,52 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+let refreshPromise: Promise<boolean> | null = null
+
+async function request<T>(
+  endpoint: string,
+  options: FetchOptions = {},
+  _retried = false,
+): Promise<T> {
   const { body, headers: customHeaders, ...rest } = options
 
   const headers: Record<string, string> = {
     ...((customHeaders as Record<string, string>) || {}),
   }
 
-  // Only set Content-Type for requests with JSON bodies
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...rest,
-    headers,
-    credentials: 'include', // Send cookies cross-origin
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-  // If access token expired, try refreshing it
-  if (response.status === 401 && !endpoint.includes('/auth/refresh')) {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...rest,
+      headers,
+      credentials: 'include',
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError(0, 'Request timed out')
+    }
+    throw err
+  } finally {
+    clearTimeout(timeoutId)
+  }
+
+  if (
+    response.status === 401 &&
+    !_retried &&
+    !endpoint.includes('/auth/refresh')
+  ) {
     const refreshed = await refreshToken()
     if (refreshed) {
-      // Retry the original request with fresh tokens
-      return request<T>(endpoint, options)
+      return request<T>(endpoint, options, true)
     }
   }
 
@@ -72,7 +95,6 @@ async function request<T>(endpoint: string, options: FetchOptions = {}): Promise
     throw new ApiError(response.status, error.detail || 'Request failed')
   }
 
-  // 204 No Content (e.g., logout)
   if (response.status === 204) {
     return undefined as T
   }
@@ -80,19 +102,27 @@ async function request<T>(endpoint: string, options: FetchOptions = {}): Promise
   return response.json()
 }
 
-/**
- * Try to refresh the access token using the refresh token cookie.
- * Returns true if successful, false if the user needs to re-login.
- */
 async function refreshToken(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      return response.ok
+    } catch {
+      return false
+    }
+  })()
+
   try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-    })
-    return response.ok
-  } catch {
-    return false
+    return await refreshPromise
+  } finally {
+    refreshPromise = null
   }
 }
 

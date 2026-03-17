@@ -108,12 +108,12 @@ async def blacklist_token(token: str, expires_in_seconds: int) -> None:
     In Next.js with NextAuth, sessions are server-side so you just delete
     them. JWTs need this extra step.
     """
-    redis_client.set(f"blacklist:{token}", "1", ex=expires_in_seconds)
+    await redis_client.set(f"blacklist:{token}", "1", ex=expires_in_seconds)
 
 
 async def is_token_blacklisted(token: str) -> bool:
     """Check if a token has been revoked (user logged out)."""
-    result = redis_client.get(f"blacklist:{token}")
+    result = await redis_client.get(f"blacklist:{token}")
     return result is not None
 
 
@@ -142,10 +142,17 @@ async def get_or_create_oauth_user(
     user = result.scalar_one_or_none()
 
     if user is not None:
-        # Link OAuth to existing account if not already linked
-        if user.oauth_provider is None:
-            user.oauth_provider = provider
-            user.oauth_id = oauth_id
+        if user.oauth_provider == provider and user.oauth_id == oauth_id:
+            return user
+
+        if user.oauth_provider and user.oauth_provider != provider:
+            raise ValueError("This email is already linked to a different OAuth provider")
+
+        if not user.oauth_provider and user.password_hash:
+            raise ValueError(
+                "An account with this email already exists. Please log in with your password."
+            )
+
         return user
 
     # Create new OAuth user (no password)

@@ -19,8 +19,9 @@ export class RedisService implements OnModuleDestroy {
 
   constructor(private readonly config: ConfigService) {
     const url = this.config.getOrThrow<string>('UPSTASH_REDIS_URL');
+    const isProduction = this.config.get('NODE_ENV') === 'production';
     this.client = new Redis(url, {
-      tls: { rejectUnauthorized: false },
+      tls: { rejectUnauthorized: isProduction },
       maxRetriesPerRequest: 3,
     });
   }

@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { ChatSession } from './chat-session.entity';
 
 @Entity('chat_messages')
+@Index('ix_chat_messages_session_id', ['session_id'])
 export class ChatMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -25,7 +27,7 @@ export class ChatMessage {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
-  @ManyToOne(() => ChatSession, (session) => session.messages)
+  @ManyToOne(() => ChatSession, (session) => session.messages, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'session_id' })
   session: ChatSession;
 }

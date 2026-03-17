@@ -17,12 +17,15 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../products/entities/product.entity';
 import { Coupon } from '../../coupons/entities/coupon.entity';
 
 @Entity('shops')
+@Index('ix_shops_owner_id', ['owner_id'])
+@Index('ix_shops_is_active', ['is_active'])
 export class Shop {
   @PrimaryGeneratedColumn('uuid')
   id: string;

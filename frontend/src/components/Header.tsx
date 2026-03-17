@@ -22,7 +22,7 @@ export default function Header() {
           <a
             href="https://x.com/tan_stack"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="hidden rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] sm:block"
           >
             <span className="sr-only">Follow TanStack on X</span>
@@ -36,7 +36,7 @@ export default function Header() {
           <a
             href="https://github.com/TanStack"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="hidden rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] sm:block"
           >
             <span className="sr-only">Go to TanStack GitHub</span>

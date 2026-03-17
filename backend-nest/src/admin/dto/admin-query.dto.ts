@@ -1,5 +1,8 @@
-import { IsOptional, IsString, IsBoolean, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsUUID, IsIn } from 'class-validator';
 import { PaginationQuery } from '../../common/dto/pagination.dto';
+
+export const VALID_ROLES = ['user', 'shop_admin', 'admin'] as const;
+export type UserRole = (typeof VALID_ROLES)[number];
 
 export class AdminUsersQueryDto extends PaginationQuery {
   @IsOptional()
@@ -7,7 +10,7 @@ export class AdminUsersQueryDto extends PaginationQuery {
   search?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(VALID_ROLES)
   role?: string;
 }
 
@@ -50,6 +53,6 @@ export class AdminCouponsQueryDto extends PaginationQuery {
 }
 
 export class UpdateUserRoleDto {
-  @IsString()
-  role: string;
+  @IsIn(VALID_ROLES, { message: `role must be one of: ${VALID_ROLES.join(', ')}` })
+  role: UserRole;
 }

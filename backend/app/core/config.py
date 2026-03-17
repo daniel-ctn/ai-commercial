@@ -1,3 +1,4 @@
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,18 +24,19 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:3000"
 
     # Database (Neon PostgreSQL)
-    # Format: postgresql+asyncpg://user:password@host/dbname?sslmode=require
     database_url: str
+    db_pool_size: int = Field(default=5, ge=1, le=50)
+    db_pool_max_overflow: int = Field(default=10, ge=0, le=100)
 
     # Redis (Upstash)
     upstash_redis_url: str
     upstash_redis_token: str
 
     # Auth
-    secret_key: str
+    secret_key: str = Field(min_length=16)
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
-    refresh_token_expire_days: int = 7
+    access_token_expire_minutes: int = Field(default=30, ge=1)
+    refresh_token_expire_days: int = Field(default=7, ge=1)
 
     # Google OAuth
     google_client_id: str = ""
@@ -42,6 +44,13 @@ class Settings(BaseSettings):
 
     # Google Gemini
     gemini_api_key: str = ""
+
+    @field_validator("database_url")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        if not v.startswith(("postgresql://", "postgresql+asyncpg://")):
+            raise ValueError("DATABASE_URL must start with postgresql:// or postgresql+asyncpg://")
+        return v
 
     @property
     def async_database_url(self) -> str:

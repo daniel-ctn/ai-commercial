@@ -24,17 +24,51 @@ export default function CreateCouponForm({ onClose }: CreateCouponFormProps) {
     shop_id: '',
   })
 
+  const [validationError, setValidationError] = useState('')
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setValidationError('')
+
+    const discountValue = parseFloat(form.discount_value)
+    if (isNaN(discountValue) || discountValue <= 0) {
+      setValidationError('Discount value must be a positive number')
+      return
+    }
+    if (form.discount_type === 'percentage' && discountValue > 100) {
+      setValidationError('Percentage discount cannot exceed 100')
+      return
+    }
+
+    let minPurchase: number | undefined
+    if (form.min_purchase) {
+      minPurchase = parseFloat(form.min_purchase)
+      if (isNaN(minPurchase) || minPurchase < 0) {
+        setValidationError('Minimum purchase must be a valid non-negative number')
+        return
+      }
+    }
+
+    const validFrom = new Date(form.valid_from)
+    const validUntil = new Date(form.valid_until)
+    if (isNaN(validFrom.getTime()) || isNaN(validUntil.getTime())) {
+      setValidationError('Please enter valid dates')
+      return
+    }
+    if (validUntil <= validFrom) {
+      setValidationError('"Valid until" must be after "Valid from"')
+      return
+    }
+
     createCoupon.mutate(
       {
         code: form.code,
         description: form.description || undefined,
         discount_type: form.discount_type,
-        discount_value: parseFloat(form.discount_value),
-        min_purchase: form.min_purchase ? parseFloat(form.min_purchase) : undefined,
-        valid_from: new Date(form.valid_from).toISOString(),
-        valid_until: new Date(form.valid_until).toISOString(),
+        discount_value: discountValue,
+        min_purchase: minPurchase,
+        valid_from: validFrom.toISOString(),
+        valid_until: validUntil.toISOString(),
         shop_id: form.shop_id,
       },
       { onSuccess: () => onClose() },
@@ -146,9 +180,12 @@ export default function CreateCouponForm({ onClose }: CreateCouponFormProps) {
           />
         </div>
         <div className="sm:col-span-2">
-          {createCoupon.isError && (
+          {(validationError || createCoupon.isError) && (
             <p className="mb-2 text-sm text-red-600">
-              {(createCoupon.error as Error).message}
+              {validationError ||
+                (createCoupon.error instanceof Error
+                  ? createCoupon.error.message
+                  : 'Failed to create coupon')}
             </p>
           )}
           <Button type="submit" disabled={createCoupon.isPending}>

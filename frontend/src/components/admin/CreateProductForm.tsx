@@ -25,14 +25,33 @@ export default function CreateProductForm({ onClose }: CreateProductFormProps) {
     category_id: '',
   })
 
+  const [validationError, setValidationError] = useState('')
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setValidationError('')
+
+    const price = parseFloat(form.price)
+    if (isNaN(price) || price < 0) {
+      setValidationError('Price must be a valid non-negative number')
+      return
+    }
+
+    let original_price: number | undefined
+    if (form.original_price) {
+      original_price = parseFloat(form.original_price)
+      if (isNaN(original_price) || original_price < 0) {
+        setValidationError('Original price must be a valid non-negative number')
+        return
+      }
+    }
+
     createProduct.mutate(
       {
         name: form.name,
         description: form.description || undefined,
-        price: parseFloat(form.price),
-        original_price: form.original_price ? parseFloat(form.original_price) : undefined,
+        price,
+        original_price,
         image_url: form.image_url || undefined,
         shop_id: form.shop_id,
         category_id: form.category_id,
@@ -136,9 +155,12 @@ export default function CreateProductForm({ onClose }: CreateProductFormProps) {
           />
         </div>
         <div className="sm:col-span-2">
-          {createProduct.isError && (
+          {(validationError || createProduct.isError) && (
             <p className="mb-2 text-sm text-red-600">
-              {(createProduct.error as Error).message}
+              {validationError ||
+                (createProduct.error instanceof Error
+                  ? createProduct.error.message
+                  : 'Failed to create product')}
             </p>
           )}
           <Button type="submit" disabled={createProduct.isPending}>

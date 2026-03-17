@@ -18,11 +18,18 @@ function AdminShopsPage() {
   const toggleActive = useToggleShopActive()
 
   return (
+    <div>
+      {toggleActive.error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          {toggleActive.error instanceof Error ? toggleActive.error.message : 'Action failed. Please try again.'}
+        </div>
+      )}
     <AdminDataTable<AdminShop>
       title="Shops"
       subtitle="Manage all shops on the platform"
       data={data?.items}
       isLoading={isLoading}
+      getRowKey={(s) => s.id}
       page={page}
       totalPages={data?.pages ?? 0}
       total={data?.total ?? 0}
@@ -40,7 +47,7 @@ function AdminShopsPage() {
                 <a
                   href={s.website}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="mt-0.5 block text-xs text-[var(--lagoon-deep)] hover:underline"
                 >
                   {s.website}
@@ -96,5 +103,6 @@ function AdminShopsPage() {
         },
       ]}
     />
+    </div>
   )
 }

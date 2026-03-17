@@ -1,20 +1,35 @@
 """Category Pydantic schemas."""
 
+import re
 import uuid
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CategoryCreate(BaseModel):
-    name: str
-    slug: str
+    name: str = Field(min_length=1, max_length=255)
+    slug: str = Field(min_length=1, max_length=255)
     parent_id: uuid.UUID | None = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str) -> str:
+        if not re.match(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", v):
+            raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
+        return v
 
 
 class CategoryUpdate(BaseModel):
-    name: str | None = None
-    slug: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    slug: str | None = Field(default=None, min_length=1, max_length=255)
     parent_id: uuid.UUID | None = None
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, v: str | None) -> str | None:
+        if v is not None and not re.match(r"^[a-z0-9]+(?:-[a-z0-9]+)*$", v):
+            raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
+        return v
 
 
 class CategoryResponse(BaseModel):

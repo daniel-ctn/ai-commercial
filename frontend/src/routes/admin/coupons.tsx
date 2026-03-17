@@ -28,14 +28,22 @@ function AdminCouponsPage() {
   const isExpired = (coupon: AdminCoupon) =>
     new Date(coupon.valid_until) < new Date()
 
+  const mutationError = toggleActive.error || deleteCoupon.error
+
   return (
     <div>
+      {mutationError && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          {mutationError instanceof Error ? mutationError.message : 'Action failed. Please try again.'}
+        </div>
+      )}
       {showCreate && <CreateCouponForm onClose={() => setShowCreate(false)} />}
       <AdminDataTable<AdminCoupon>
         title="Coupons"
         subtitle="Manage all coupons and promotions"
         data={data?.items}
         isLoading={isLoading}
+        getRowKey={(c) => c.id}
         page={page}
         totalPages={data?.pages ?? 0}
         total={data?.total ?? 0}

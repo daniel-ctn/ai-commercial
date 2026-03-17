@@ -37,7 +37,7 @@ we read them from `request.cookies`.
 """
 
 from fastapi import Depends, HTTPException, Request, status
-from jose import JWTError
+from jwt.exceptions import PyJWTError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -80,7 +80,7 @@ async def get_current_user(
 
         if user_id is None or token_type != "access":
             raise credentials_exception
-    except JWTError:
+    except PyJWTError:
         raise credentials_exception
 
     # Look up the user in the database

@@ -14,10 +14,12 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Product } from '../../products/entities/product.entity';
 
 @Entity('categories')
+@Index('ix_categories_parent_id', ['parent_id'])
 export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -32,7 +34,7 @@ export class Category {
   parent_id: string | null;
 
   // Self-referencing: parent category
-  @ManyToOne(() => Category, (cat) => cat.children, { nullable: true })
+  @ManyToOne(() => Category, (cat) => cat.children, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'parent_id' })
   parent: Category | null;
 

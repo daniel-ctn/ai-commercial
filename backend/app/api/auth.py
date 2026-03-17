@@ -33,7 +33,7 @@ This is equivalent to NextResponse.cookies.set() in Next.js.
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from jose import JWTError
+from jwt.exceptions import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -212,7 +212,7 @@ async def refresh_token(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
             )
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
@@ -343,14 +343,19 @@ async def google_callback(
 
         google_user = user_info_response.json()
 
-    # Create or find the user in our database
-    user = await get_or_create_oauth_user(
-        db,
-        email=google_user["email"],
-        name=google_user.get("name", google_user["email"]),
-        provider="google",
-        oauth_id=google_user["id"],
-    )
+    try:
+        user = await get_or_create_oauth_user(
+            db,
+            email=google_user["email"],
+            name=google_user.get("name", google_user["email"]),
+            provider="google",
+            oauth_id=google_user["id"],
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        )
 
     tokens = create_tokens(user)
     _set_auth_cookies(response, tokens)

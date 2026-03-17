@@ -12,10 +12,14 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Shop } from '../../shops/entities/shop.entity';
 
 @Entity('coupons')
+@Index('ix_coupons_shop_id', ['shop_id'])
+@Index('ix_coupons_is_active', ['is_active'])
+@Index('ix_coupons_valid_until', ['valid_until'])
 export class Coupon {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -47,7 +51,7 @@ export class Coupon {
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
-  @ManyToOne(() => Shop, (shop) => shop.coupons)
+  @ManyToOne(() => Shop, (shop) => shop.coupons, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
 }

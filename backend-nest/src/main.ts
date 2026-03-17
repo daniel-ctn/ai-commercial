@@ -5,15 +5,19 @@
  * In NestJS, YOU create the server explicitly with NestFactory.
  * This gives you full control over middleware, CORS, pipes, etc.
  */
-import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+
+  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Global prefix — every route starts with /api/v1
   // Like setting `basePath` in next.config.ts
@@ -24,7 +28,7 @@ async function bootstrap() {
   app.enableCors({
     origin: config.get<string>('FRONTEND_URL', 'http://localhost:3000'),
     credentials: true, // Required for cookies to work cross-origin
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
@@ -39,6 +43,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
+      forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
     }),
@@ -46,8 +51,14 @@ async function bootstrap() {
 
   const port = config.get<number>('PORT', 8000);
   await app.listen(port);
-  console.log(`NestJS server running on http://localhost:${port}`);
-  console.log(`API docs: http://localhost:${port}/api/v1`);
+
+  const logger = new Logger('Bootstrap');
+  logger.log(`Server running on http://localhost:${port}`);
+  logger.log(`API prefix: http://localhost:${port}/api/v1`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  const logger = new Logger('Bootstrap');
+  logger.fatal('Failed to start application', err);
+  process.exit(1);
+});

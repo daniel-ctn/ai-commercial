@@ -112,8 +112,14 @@ export class AuthController {
       await this.authService.blacklistToken(refreshToken, expireDays * 24 * 3600);
     }
 
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
+    const isProduction = this.config.get('NODE_ENV') === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax' as const,
+    };
+    res.clearCookie('access_token', cookieOptions);
+    res.clearCookie('refresh_token', cookieOptions);
   }
 
   @Post('refresh')
@@ -185,9 +191,13 @@ export class AuthController {
 
     const tokenData = await tokenRes.json();
 
-    // Get user info from Google
     const userInfoRes = await fetch(
-      `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${tokenData.access_token}`,
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      {
+        headers: {
+          Authorization: `Bearer ${tokenData.access_token}`,
+        },
+      },
     );
 
     if (!userInfoRes.ok) {

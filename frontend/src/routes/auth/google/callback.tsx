@@ -22,35 +22,41 @@
  * access them type-safely with `Route.useSearch()`.
  */
 
-import { useEffect, useRef } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useEffect, useRef, useState } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { api } from '#/lib/api'
+import { api, ApiError } from '#/lib/api'
 
 interface GoogleCallbackSearch {
   code?: string
+  error?: string
 }
 
 export const Route = createFileRoute('/auth/google/callback')({
   validateSearch: (search: Record<string, unknown>): GoogleCallbackSearch => ({
     code: search.code as string | undefined,
+    error: search.error as string | undefined,
   }),
   component: GoogleCallback,
 })
 
 function GoogleCallback() {
-  const { code } = Route.useSearch()
+  const { code, error: oauthError } = Route.useSearch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const hasRun = useRef(false)
+  const [error, setError] = useState<string | null>(
+    oauthError ? 'Google sign-in was denied or failed.' : null,
+  )
 
   useEffect(() => {
-    // Prevent double-execution in React Strict Mode
     if (hasRun.current) return
     hasRun.current = true
 
-    if (!code) {
-      navigate({ to: '/auth/login' })
+    if (oauthError || !code) {
+      if (!oauthError) {
+        setError('No authorization code received from Google.')
+      }
       return
     }
 
@@ -60,14 +66,37 @@ function GoogleCallback() {
         queryClient.invalidateQueries({ queryKey: ['auth'] })
         navigate({ to: '/' })
       })
-      .catch(() => {
-        navigate({ to: '/auth/login' })
+      .catch((err) => {
+        if (err instanceof ApiError) {
+          setError(err.message || 'Authentication failed. Please try again.')
+        } else {
+          setError('An unexpected error occurred. Please try again.')
+        }
       })
-  }, [code, navigate, queryClient])
+  }, [code, oauthError, navigate, queryClient])
+
+  if (error) {
+    return (
+      <main className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive font-medium">{error}</p>
+          <Link
+            to="/auth/login"
+            className="inline-block text-sm text-primary underline underline-offset-4 hover:text-primary/80"
+          >
+            Back to login
+          </Link>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
-      <p className="text-muted-foreground">Signing in with Google...</p>
+      <div className="text-center space-y-2">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground">Signing in with Google...</p>
+      </div>
     </main>
   )
 }

@@ -10,6 +10,7 @@
  * TanStack Router, we use `<Link to={...}>` instead of Next's `<Link href={...}>`.
  */
 
+import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardFooter } from '#/components/ui/card'
@@ -19,7 +20,7 @@ interface ProductCardProps {
   product: Product
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default memo(function ProductCard({ product }: ProductCardProps) {
   const isOnSale = product.original_price && product.original_price > product.price
   const discount = isOnSale
     ? Math.round((1 - product.price / product.original_price!) * 100)
@@ -74,4 +75,4 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Card>
     </Link>
   )
-}
+})

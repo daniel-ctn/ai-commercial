@@ -35,6 +35,7 @@ Both backends connect to the same **Neon PostgreSQL** database and **Upstash Red
 - [x] Phase 2: Database entities & DTOs
 - [x] Phase 3: Auth system
 - [x] Phase 4: Core CRUD APIs
+- [x] Phase 5: Admin dashboard
 
 ## Architecture Overview
 
@@ -351,11 +352,36 @@ The AI will receive the tool results and formulate natural-language responses wi
 - SQLAlchemy `select().where().options(joinedload())` = query building with eager loading (like Prisma `findMany({ where, include })`)
 - `HTTPException(status_code=403)` = throwing HTTP errors (like `NextResponse.json({}, { status: 403 })`)
 
-### Phase 5: Admin Dashboard
+### Phase 5: Admin Dashboard (DONE)
 
-- Backend: Admin-only endpoints for managing shops, products, coupons
-- Frontend: Admin layout with sidebar navigation
-- Frontend: CRUD forms for products, coupons, shop settings
+- Backend: Admin router (`/admin/*`) with all endpoints protected by `get_current_admin` dependency
+- Backend: Dashboard stats endpoint — aggregate counts (users, shops, products, coupons, active vs total)
+- Backend: User management — list all users with search/role filter, change user roles
+- Backend: Shop management — list all shops (including inactive) with owner info, toggle active status
+- Backend: Product management — list all products (including inactive) with shop/category info, toggle active
+- Backend: Coupon management — list all coupons with shop info, toggle active
+- Frontend: Admin layout route with `beforeLoad` guard (redirects non-admins to `/`)
+- Frontend: Sidebar navigation (desktop) + horizontal scroll nav (mobile)
+- Frontend: Dashboard overview page with 8 stats cards
+- Frontend: Users management page with role change (user → shop_admin → admin cycle)
+- Frontend: Shops management page with activate/deactivate toggle
+- Frontend: Products management page with create form, toggle active, delete
+- Frontend: Coupons management page with create form, toggle active, delete
+- Frontend: Reusable `AdminDataTable` component for all management pages
+- Frontend: "Admin" nav link in Header (conditionally shown for admin users only)
+- Frontend: Admin types (`AdminStats`, `AdminUser`, `AdminShop`, `AdminProduct`, `AdminCoupon`) and query hooks
+
+**FastAPI learning notes**:
+- Protecting an entire router: every endpoint uses `Depends(get_current_admin)` — like wrapping all routes in admin middleware
+- `joinedload(Shop.owner)` in admin queries loads related user data in one SQL query (like Prisma `include: { owner: true }`)
+- Admin schemas extend regular schemas with extra fields (owner_email, etc.) — separates public vs admin API responses
+- `func.count()` with `select_from()` = aggregate queries (like `prisma.user.count()`)
+
+**NestJS learning notes**:
+- Controller-level `@UseGuards(JwtAuthGuard, AdminGuard)` = apply guards to ALL methods (like wrapping a route group in middleware)
+- `Promise.all()` for parallel count queries — NestJS doesn't prescribe async patterns, you use standard JS/TS
+- `AdminModule` imports `TypeOrmModule.forFeature([User, Shop, Product, Coupon, Category])` — registers all entity repositories for cross-entity queries
+- `createQueryBuilder()` with `leftJoinAndSelect()` = complex queries with joins, like Prisma `include` + `where`
 
 ### Phase 6: AI Chatbot
 
@@ -450,3 +476,21 @@ The AI will receive the tool results and formulate natural-language responses wi
 - `@Query()`, `@Param()`, `@Body()` = extract parts of the request (like `searchParams`, `params`, `request.json()`)
 - `Repository` pattern = data access layer (like Prisma client queries in a server action)
 - `QueryBuilder` = complex queries with joins/filters (like Prisma's `where` + `include`)
+
+### NestJS Phase 5: Admin Dashboard
+
+**What you'll learn**: Controller-level guards, cross-entity aggregation, module-scoped repository imports.
+
+- Admin module with controller, service, and DTOs
+- Controller-level `@UseGuards(JwtAuthGuard, AdminGuard)` — protects all endpoints at once
+- Dashboard stats via `Promise.all()` with multiple `.count()` calls across entities
+- User management — list with search/role filter, update roles
+- Shop management — list with owner join, toggle active status
+- Product/coupon management — list all (including inactive), toggle active
+- DTOs extending `PaginationQuery` for consistent query param validation
+
+**Key concepts**:
+- Controller-level `@UseGuards()` = applies guards to ALL methods in the controller (like a layout-level middleware)
+- `TypeOrmModule.forFeature([User, Shop, Product, ...])` = register multiple repositories in one module for cross-entity queries
+- `Promise.all()` for parallel DB queries = no NestJS-specific pattern, just standard async JS
+- `createQueryBuilder().leftJoinAndSelect()` = eager-load related data in admin list views

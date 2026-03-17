@@ -24,23 +24,35 @@ it can read data directly from SQLAlchemy model instances (which use
 attributes, not dict keys).
 """
 
+import re
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, field_validator
 
 
 class UserCreate(BaseModel):
     """Schema for POST /register — what the frontend sends."""
     email: EmailStr
-    password: str
-    name: str
+    password: str = Field(min_length=8, max_length=128)
+    name: str = Field(min_length=1, max_length=100)
+
+    @field_validator("password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one number")
+        return v
 
 
 class UserLogin(BaseModel):
     """Schema for POST /login."""
     email: EmailStr
-    password: str
+    password: str = Field(max_length=128)
 
 
 class UserResponse(BaseModel):
