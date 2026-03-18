@@ -1,25 +1,25 @@
 # Web framework
 fastapi>=0.135.1
-uvicorn[standard]>=0.34.0
+uvicorn[standard]>=0.42.0
 
 # Database (Neon PostgreSQL)
-sqlalchemy[asyncio]>=2.0.40
-asyncpg>=0.30.0
-alembic>=1.15.2
+sqlalchemy[asyncio]>=2.0.48
+asyncpg>=0.31.0
+alembic>=1.18.4
 
 # Redis (Upstash)
-upstash-redis>=1.6.0
+upstash-redis>=1.7.0
 
 # Auth
-PyJWT>=2.10.0
-bcrypt>=4.2.0
-python-multipart>=0.0.20
+PyJWT>=2.12.1
+bcrypt>=5.0.0
+python-multipart>=0.0.22
 httpx>=0.28.1
 
 # AI (Google Gemini)
-google-genai>=1.16.0
+google-genai>=1.68.0
 
 # Config
-pydantic[email]>=2.0.0
-pydantic-settings>=2.9.1
-python-dotenv>=1.1.0
+pydantic[email]>=2.12.5
+pydantic-settings>=2.13.1
+python-dotenv>=1.2.2

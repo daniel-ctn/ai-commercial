@@ -16,9 +16,9 @@
  *   - useChat: React hook that ties it all together
  */
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '#/lib/api'
-import type { ChatMessage, ChatSession, ChatSSEEvent } from '#/lib/types'
+import type { ChatSession, ChatSSEEvent } from '#/lib/types'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
 
@@ -38,6 +38,44 @@ interface StreamCallbacks {
   onChunk?: (text: string) => void
   onDone?: (text: string) => void
   onError?: (message: string) => void
+}
+
+function processSseEvent(eventStr: string, callbacks: StreamCallbacks) {
+  if (!eventStr.trim()) return
+
+  let eventType = ''
+  let eventData = ''
+
+  for (const line of eventStr.split('\n')) {
+    if (line.startsWith('event: ')) {
+      eventType = line.slice(7)
+    } else if (line.startsWith('data: ')) {
+      eventData = line.slice(6)
+    }
+  }
+
+  if (!eventType || !eventData) return
+
+  try {
+    const parsed = JSON.parse(eventData) as ChatSSEEvent['data']
+
+    switch (eventType) {
+      case 'status':
+        callbacks.onStatus?.((parsed as { message: string }).message)
+        break
+      case 'chunk':
+        callbacks.onChunk?.((parsed as { text: string }).text)
+        break
+      case 'done':
+        callbacks.onDone?.((parsed as { text: string }).text)
+        break
+      case 'error':
+        callbacks.onError?.((parsed as { message: string }).message)
+        break
+    }
+  } catch {
+    // Skip malformed SSE data
+  }
 }
 
 /**
@@ -68,17 +106,17 @@ export async function sendChatMessage(
     return
   }
 
-  const reader = response.body?.getReader()
-  if (!reader) {
+  if (response.body === null) {
     callbacks.onError?.('No response stream')
     return
   }
+  const reader = response.body.getReader()
 
   const decoder = new TextDecoder()
   let buffer = ''
 
   try {
-    while (true) {
+    for (;;) {
       const { done, value } = await reader.read()
       if (done) break
 
@@ -90,43 +128,11 @@ export async function sendChatMessage(
       buffer = events.pop() || ''
 
       for (const eventStr of events) {
-        if (!eventStr.trim()) continue
-
-        let eventType = ''
-        let eventData = ''
-
-        for (const line of eventStr.split('\n')) {
-          if (line.startsWith('event: ')) {
-            eventType = line.slice(7)
-          } else if (line.startsWith('data: ')) {
-            eventData = line.slice(6)
-          }
-        }
-
-        if (!eventType || !eventData) continue
-
-        try {
-          const parsed = JSON.parse(eventData) as ChatSSEEvent['data']
-
-          switch (eventType) {
-            case 'status':
-              callbacks.onStatus?.((parsed as { message: string }).message)
-              break
-            case 'chunk':
-              callbacks.onChunk?.((parsed as { text: string }).text)
-              break
-            case 'done':
-              callbacks.onDone?.((parsed as { text: string }).text)
-              break
-            case 'error':
-              callbacks.onError?.((parsed as { message: string }).message)
-              break
-          }
-        } catch {
-          // Skip malformed SSE data
-        }
+        processSseEvent(eventStr, callbacks)
       }
     }
+
+    processSseEvent(buffer, callbacks)
   } finally {
     reader.releaseLock()
   }
@@ -168,6 +174,12 @@ export function useChat(): UseChatReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || isLoading) return

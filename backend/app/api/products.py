@@ -65,6 +65,7 @@ from app.schemas.product import (
 router = APIRouter(prefix="/products", tags=["Products"])
 
 logger = logging.getLogger(__name__)
+PRODUCT_LIST_CACHE_VERSION_KEY = "products:list:version"
 
 
 async def _cache_get(key: str) -> str | None:
@@ -89,6 +90,22 @@ async def _cache_delete(key: str) -> None:
         logger.warning("Redis delete failed for key %s", key, exc_info=True)
 
 
+async def _cache_get_version(key: str) -> str:
+    try:
+        version = await redis_client.get(key)
+        return str(version or "0")
+    except Exception:
+        logger.warning("Redis version read failed for key %s", key, exc_info=True)
+        return "0"
+
+
+async def _cache_bump_version(key: str) -> None:
+    try:
+        await redis_client.incr(key)
+    except Exception:
+        logger.warning("Redis version bump failed for key %s", key, exc_info=True)
+
+
 @router.get("", response_model=PaginatedResponse[ProductDetailResponse])
 async def list_products(
     page: int = Query(1, ge=1),
@@ -107,7 +124,11 @@ async def list_products(
     Filters stack — you can combine them:
       GET /products?category=laptops&min_price=500&max_price=1500&on_sale=true
     """
-    cache_key = f"products:list:{page}:{page_size}:{search}:{category}:{shop_id}:{min_price}:{max_price}:{on_sale}"
+    list_version = await _cache_get_version(PRODUCT_LIST_CACHE_VERSION_KEY)
+    cache_key = (
+        f"products:list:v{list_version}:{page}:{page_size}:{search}:{category}:"
+        f"{shop_id}:{min_price}:{max_price}:{on_sale}"
+    )
     cached_data = await _cache_get(cache_key)
     if cached_data:
         return json.loads(cached_data)
@@ -243,6 +264,7 @@ async def create_product(
     db.add(product)
     await db.flush()
     await _cache_delete(f"product:detail:{product.id}")
+    await _cache_bump_version(PRODUCT_LIST_CACHE_VERSION_KEY)
     return product
 
 
@@ -269,6 +291,7 @@ async def update_product(
 
     await db.flush()
     await _cache_delete(f"product:detail:{product_id}")
+    await _cache_bump_version(PRODUCT_LIST_CACHE_VERSION_KEY)
     return product
 
 
@@ -291,3 +314,4 @@ async def delete_product(
     await db.delete(product)
     await db.flush()
     await _cache_delete(f"product:detail:{product_id}")
+    await _cache_bump_version(PRODUCT_LIST_CACHE_VERSION_KEY)

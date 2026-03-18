@@ -4,7 +4,8 @@ import { Button } from '#/components/ui/button'
 import { useCompareList } from '#/lib/compare'
 
 export default function CompareBar() {
-  const { ids, count, clear } = useCompareList()
+  const { count, clear } = useCompareList()
+  const canCompare = count >= 2
 
   if (count === 0) return null
 
@@ -15,11 +16,15 @@ export default function CompareBar() {
         <span className="text-sm font-medium">
           {count} product{count !== 1 && 's'} selected
         </span>
-        <Link to="/compare">
-          <Button size="sm" disabled={count < 2}>
+        {canCompare ? (
+          <Link to="/compare">
+            <Button size="sm">Compare</Button>
+          </Link>
+        ) : (
+          <Button size="sm" disabled>
             Compare
           </Button>
-        </Link>
+        )}
         <button
           type="button"
           onClick={clear}

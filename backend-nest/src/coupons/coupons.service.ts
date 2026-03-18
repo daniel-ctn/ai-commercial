@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,8 +16,12 @@ import { QueryCouponsDto } from './dto/query-coupons.dto';
 import { PaginatedResponse } from '../common/dto/pagination.dto';
 import { RedisService } from '../redis/redis.service';
 
+const COUPON_LIST_CACHE_VERSION_KEY = 'coupons:list:version';
+
 @Injectable()
 export class CouponsService {
+  private readonly logger = new Logger(CouponsService.name);
+
   constructor(
     @InjectRepository(Coupon)
     private readonly couponsRepo: Repository<Coupon>,
@@ -26,7 +31,8 @@ export class CouponsService {
   ) {}
 
   async findAll(query: QueryCouponsDto): Promise<PaginatedResponse<Coupon>> {
-    const cacheKey = `coupons:list:${query.page}:${query.page_size}:${query.shop_id || ''}:${query.active_only}`;
+    const listVersion = await this.getListCacheVersion(COUPON_LIST_CACHE_VERSION_KEY);
+    const cacheKey = `coupons:list:v${listVersion}:${query.page}:${query.page_size}:${query.shop_id || ''}:${query.active_only}`;
     const cachedData = await this.redisService.get(cacheKey);
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
@@ -91,7 +97,9 @@ export class CouponsService {
       valid_from: validFrom,
       valid_until: validUntil,
     });
-    return this.couponsRepo.save(coupon);
+    const saved = await this.couponsRepo.save(coupon);
+    await this.bumpListCacheVersion(COUPON_LIST_CACHE_VERSION_KEY);
+    return saved;
   }
 
   async update(id: string, dto: UpdateCouponDto, user: User): Promise<Coupon> {
@@ -113,6 +121,7 @@ export class CouponsService {
 
     const saved = await this.couponsRepo.save(coupon);
     await this.redisService.del(`coupon:detail:${id}`);
+    await this.bumpListCacheVersion(COUPON_LIST_CACHE_VERSION_KEY);
     return saved;
   }
 
@@ -121,6 +130,7 @@ export class CouponsService {
     await this.assertShopOwnership(coupon.shop_id, user);
     await this.couponsRepo.remove(coupon);
     await this.redisService.del(`coupon:detail:${id}`);
+    await this.bumpListCacheVersion(COUPON_LIST_CACHE_VERSION_KEY);
   }
 
   private async assertShopOwnership(
@@ -160,6 +170,19 @@ export class CouponsService {
 
     if (validUntil <= validFrom) {
       throw new BadRequestException('valid_until must be after valid_from');
+    }
+  }
+
+  private async getListCacheVersion(key: string): Promise<string> {
+    const version = await this.redisService.get(key);
+    return version ?? '0';
+  }
+
+  private async bumpListCacheVersion(key: string): Promise<void> {
+    try {
+      await this.redisService.incr(key);
+    } catch (error) {
+      this.logger.warn(`Redis version bump failed for key ${key}: ${String(error)}`);
     }
   }
 }

@@ -41,14 +41,21 @@ async def compare_products(
     ),
     db: AsyncSession = Depends(get_db),
 ):
+    ordered_ids = list(dict.fromkeys(ids))
     result = await db.execute(
         select(Product)
-        .where(Product.id.in_(ids), Product.is_active.is_(True))
+        .where(Product.id.in_(ordered_ids), Product.is_active.is_(True))
         .options(joinedload(Product.shop), joinedload(Product.category))
     )
     products = list(result.scalars().unique().all())
+    products_by_id = {product.id: product for product in products}
+    ordered_products = [
+        products_by_id[product_id]
+        for product_id in ordered_ids
+        if product_id in products_by_id
+    ]
 
-    if len(products) < 2:
+    if len(ordered_products) < 2:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Need at least 2 active products to compare",
@@ -57,7 +64,7 @@ async def compare_products(
     all_keys: set[str] = set()
     items: list[CompareProductItem] = []
 
-    for p in products:
+    for p in ordered_products:
         if p.attributes:
             all_keys.update(p.attributes.keys())
 

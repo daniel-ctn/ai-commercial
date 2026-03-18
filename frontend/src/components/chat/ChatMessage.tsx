@@ -12,9 +12,13 @@ interface ChatMessageProps {
  * User messages: right-aligned, lagoon-tinted background
  * Assistant messages: left-aligned, surface background, with markdown-like formatting
  */
-export const ChatMessageBubble = memo(function ChatMessageBubble({
+export const ChatMessageBubble = memo(function ({
   message,
 }: ChatMessageProps) {
+  return <ChatMessageBubbleContent message={message} />
+})
+
+function ChatMessageBubbleContent({ message }: ChatMessageProps) {
   const isUser = message.role === 'user'
 
   if (isUser) {
@@ -51,7 +55,7 @@ export const ChatMessageBubble = memo(function ChatMessageBubble({
       </div>
     </div>
   )
-})
+}
 
 /**
  * Renders assistant message content with basic markdown-like formatting.

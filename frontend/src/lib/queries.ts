@@ -155,7 +155,7 @@ export const compareQueryOptions = (ids: string[]) => {
   ids.forEach((id) => params.append('ids', id))
 
   return queryOptions({
-    queryKey: ['compare', ...ids.sort()],
+    queryKey: ['compare', ids],
     queryFn: () => api.get<CompareResponse>(`/compare?${params.toString()}`),
     enabled: ids.length >= 2,
   })

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import { useCallback, useSyncExternalStore } from "react"
 import {
   CircleCheckIcon,
@@ -6,7 +7,8 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react"
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { Toaster as Sonner } from "sonner"
+import type { ToasterProps } from "sonner"
 
 function getResolvedTheme(): "light" | "dark" {
   if (typeof document === "undefined") return "light"
@@ -46,7 +48,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           "--border-radius": "var(--radius)",
-        } as React.CSSProperties
+        } as CSSProperties
       }
       {...props}
     />

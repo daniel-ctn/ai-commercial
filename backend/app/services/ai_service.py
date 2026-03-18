@@ -230,7 +230,7 @@ async def _get_product_details(db: AsyncSession, args: dict) -> dict:
 
     result = await db.execute(
         select(Product)
-        .where(Product.id == product_id)
+        .where(Product.id == product_id, Product.is_active.is_(True))
         .options(joinedload(Product.shop), joinedload(Product.category))
     )
     product = result.scalar_one_or_none()
@@ -366,12 +366,18 @@ async def _compare_products(db: AsyncSession, args: dict) -> dict:
 
     result = await db.execute(
         select(Product)
-        .where(Product.id.in_(product_ids))
+        .where(Product.id.in_(product_ids), Product.is_active.is_(True))
         .options(joinedload(Product.shop), joinedload(Product.category))
     )
     products = list(result.scalars().unique().all())
+    products_by_id = {product.id: product for product in products}
+    ordered_products = [
+        products_by_id[product_id]
+        for product_id in dict.fromkeys(product_ids)
+        if product_id in products_by_id
+    ]
 
-    if len(products) < 2:
+    if len(ordered_products) < 2:
         return {"error": "Could not find enough products to compare"}
 
     return {
@@ -382,12 +388,13 @@ async def _compare_products(db: AsyncSession, args: dict) -> dict:
                 "description": (p.description or "")[:200],
                 "price": float(p.price),
                 "original_price": float(p.original_price) if p.original_price else None,
+                "image_url": p.image_url,
                 "attributes": p.attributes,
                 "shop_name": p.shop.name if p.shop else None,
                 "category_name": p.category.name if p.category else None,
                 "on_sale": p.original_price is not None and p.original_price > p.price,
             }
-            for p in products
+            for p in ordered_products
         ],
     }
 

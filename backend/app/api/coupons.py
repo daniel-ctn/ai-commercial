@@ -27,6 +27,7 @@ from app.schemas.coupon import CouponCreate, CouponResponse, CouponUpdate
 router = APIRouter(prefix="/coupons", tags=["Coupons"])
 
 logger = logging.getLogger(__name__)
+COUPON_LIST_CACHE_VERSION_KEY = "coupons:list:version"
 
 
 async def _cache_get(key: str) -> str | None:
@@ -51,6 +52,22 @@ async def _cache_delete(key: str) -> None:
         logger.warning("Redis delete failed for key %s", key, exc_info=True)
 
 
+async def _cache_get_version(key: str) -> str:
+    try:
+        version = await redis_client.get(key)
+        return str(version or "0")
+    except Exception:
+        logger.warning("Redis version read failed for key %s", key, exc_info=True)
+        return "0"
+
+
+async def _cache_bump_version(key: str) -> None:
+    try:
+        await redis_client.incr(key)
+    except Exception:
+        logger.warning("Redis version bump failed for key %s", key, exc_info=True)
+
+
 @router.get("", response_model=PaginatedResponse[CouponResponse])
 async def list_coupons(
     page: int = Query(1, ge=1),
@@ -63,7 +80,8 @@ async def list_coupons(
     List coupons. By default only shows currently active and valid ones.
     Pass ?active_only=false to see all (for shop owner dashboards).
     """
-    cache_key = f"coupons:list:{page}:{page_size}:{shop_id}:{active_only}"
+    list_version = await _cache_get_version(COUPON_LIST_CACHE_VERSION_KEY)
+    cache_key = f"coupons:list:v{list_version}:{page}:{page_size}:{shop_id}:{active_only}"
     cached_data = await _cache_get(cache_key)
     if cached_data:
         return json.loads(cached_data)
@@ -149,6 +167,7 @@ async def create_coupon(
     db.add(coupon)
     await db.flush()
     await _cache_delete(f"coupon:detail:{coupon.id}")
+    await _cache_bump_version(COUPON_LIST_CACHE_VERSION_KEY)
     return coupon
 
 
@@ -175,6 +194,7 @@ async def update_coupon(
 
     await db.flush()
     await _cache_delete(f"coupon:detail:{coupon_id}")
+    await _cache_bump_version(COUPON_LIST_CACHE_VERSION_KEY)
     return coupon
 
 
@@ -197,3 +217,4 @@ async def delete_coupon(
     await db.delete(coupon)
     await db.flush()
     await _cache_delete(f"coupon:detail:{coupon_id}")
+    await _cache_bump_version(COUPON_LIST_CACHE_VERSION_KEY)

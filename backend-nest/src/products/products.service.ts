@@ -13,6 +13,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -27,9 +28,12 @@ import { RedisService } from '../redis/redis.service';
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PRODUCT_LIST_CACHE_VERSION_KEY = 'products:list:version';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(
     @InjectRepository(Product)
     private readonly productsRepo: Repository<Product>,
@@ -41,7 +45,8 @@ export class ProductsService {
   async findAll(
     query: QueryProductsDto,
   ): Promise<PaginatedResponse<Product>> {
-    const cacheKey = `products:list:${query.page}:${query.page_size}:${query.search || ''}:${query.category || ''}:${query.shop_id || ''}:${query.min_price || ''}:${query.max_price || ''}:${query.on_sale || ''}`;
+    const listVersion = await this.getListCacheVersion(PRODUCT_LIST_CACHE_VERSION_KEY);
+    const cacheKey = `products:list:v${listVersion}:${query.page}:${query.page_size}:${query.search || ''}:${query.category || ''}:${query.shop_id || ''}:${query.min_price || ''}:${query.max_price || ''}:${query.on_sale || ''}`;
     const cachedData = await this.redisService.get(cacheKey);
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
@@ -138,7 +143,9 @@ export class ProductsService {
     await this.assertShopOwnership(dto.shop_id, user);
 
     const product = this.productsRepo.create(dto);
-    return this.productsRepo.save(product);
+    const saved = await this.productsRepo.save(product);
+    await this.bumpListCacheVersion(PRODUCT_LIST_CACHE_VERSION_KEY);
+    return saved;
   }
 
   async update(
@@ -152,6 +159,7 @@ export class ProductsService {
     Object.assign(product, dto);
     const saved = await this.productsRepo.save(product);
     await this.redisService.del(`product:detail:${id}`);
+    await this.bumpListCacheVersion(PRODUCT_LIST_CACHE_VERSION_KEY);
     return saved;
   }
 
@@ -160,6 +168,7 @@ export class ProductsService {
     await this.assertShopOwnership(product.shop_id, user);
     await this.productsRepo.remove(product);
     await this.redisService.del(`product:detail:${id}`);
+    await this.bumpListCacheVersion(PRODUCT_LIST_CACHE_VERSION_KEY);
   }
 
   private async assertShopOwnership(
@@ -174,6 +183,19 @@ export class ProductsService {
     }
     if (shop.owner_id !== user.id) {
       throw new ForbiddenException('You do not own this shop');
+    }
+  }
+
+  private async getListCacheVersion(key: string): Promise<string> {
+    const version = await this.redisService.get(key);
+    return version ?? '0';
+  }
+
+  private async bumpListCacheVersion(key: string): Promise<void> {
+    try {
+      await this.redisService.incr(key);
+    } catch (error) {
+      this.logger.warn(`Redis version bump failed for key ${key}: ${String(error)}`);
     }
   }
 }

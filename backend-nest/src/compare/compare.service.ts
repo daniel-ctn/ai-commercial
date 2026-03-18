@@ -37,19 +37,25 @@ export class CompareService {
   ) {}
 
   async compare(ids: string[]): Promise<CompareResponse> {
+    const orderedIds = [...new Set(ids)];
     const products = await this.productsRepo.find({
-      where: { id: In(ids), is_active: true },
+      where: { id: In(orderedIds), is_active: true },
       relations: ['shop', 'category'],
     });
 
-    if (products.length < 2) {
+    const productsById = new Map(products.map((product) => [product.id, product]));
+    const orderedProducts = orderedIds
+      .map((id) => productsById.get(id))
+      .filter((product): product is Product => product !== undefined);
+
+    if (orderedProducts.length < 2) {
       throw new BadRequestException(
         'Need at least 2 active products to compare',
       );
     }
 
     const allKeys = new Set<string>();
-    const items: CompareProductItem[] = products.map((p) => {
+    const items: CompareProductItem[] = orderedProducts.map((p) => {
       if (p.attributes && typeof p.attributes === 'object') {
         Object.keys(p.attributes).forEach((k) => allKeys.add(k));
       }
