@@ -23,6 +23,7 @@
 
 import { queryOptions, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '#/lib/api'
+import { toast } from 'sonner'
 import type {
   AdminCoupon,
   AdminProduct,
@@ -231,7 +232,10 @@ export function useUpdateUserRole() {
   return useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: string }) =>
       api.patch<AdminUser>(`/admin/users/${userId}/role`, { role }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'users'] })
+      toast.success('User role updated')
+    },
   })
 }
 
@@ -240,7 +244,10 @@ export function useToggleShopActive() {
   return useMutation({
     mutationFn: (shopId: string) =>
       api.patch<AdminShop>(`/admin/shops/${shopId}/toggle-active`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'shops'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'shops'] })
+      toast.success('Shop status updated')
+    },
   })
 }
 
@@ -249,7 +256,10 @@ export function useToggleProductActive() {
   return useMutation({
     mutationFn: (productId: string) =>
       api.patch<AdminProduct>(`/admin/products/${productId}/toggle-active`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'products'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'products'] })
+      toast.success('Product status updated')
+    },
   })
 }
 
@@ -258,7 +268,10 @@ export function useToggleCouponActive() {
   return useMutation({
     mutationFn: (couponId: string) =>
       api.patch<AdminCoupon>(`/admin/coupons/${couponId}/toggle-active`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'coupons'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'coupons'] })
+      toast.success('Coupon status updated')
+    },
   })
 }
 
@@ -279,6 +292,7 @@ export function useCreateProduct() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'products'] })
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success('Product created successfully')
     },
   })
 }
@@ -290,6 +304,7 @@ export function useDeleteProduct() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'products'] })
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success('Product deleted')
     },
   })
 }
@@ -310,6 +325,7 @@ export function useCreateCoupon() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'coupons'] })
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success('Coupon created successfully')
     },
   })
 }
@@ -321,6 +337,7 @@ export function useDeleteCoupon() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin', 'coupons'] })
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success('Coupon deleted')
     },
   })
 }

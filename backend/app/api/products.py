@@ -38,6 +38,8 @@ SAME query using a SQL JOIN. This is like Prisma's `include: { shop: true }`.
 """
 
 import uuid
+import json
+import logging
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -46,6 +48,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
+from app.core.redis import redis_client
 from app.core.dependencies import get_current_user
 from app.models.category import Category
 from app.models.product import Product
@@ -60,6 +63,30 @@ from app.schemas.product import (
 )
 
 router = APIRouter(prefix="/products", tags=["Products"])
+
+logger = logging.getLogger(__name__)
+
+
+async def _cache_get(key: str) -> str | None:
+    try:
+        return await redis_client.get(key)
+    except Exception:
+        logger.warning("Redis read failed for key %s", key, exc_info=True)
+        return None
+
+
+async def _cache_set(key: str, value: str, ttl: int = 60) -> None:
+    try:
+        await redis_client.setex(key, ttl, value)
+    except Exception:
+        logger.warning("Redis write failed for key %s", key, exc_info=True)
+
+
+async def _cache_delete(key: str) -> None:
+    try:
+        await redis_client.delete(key)
+    except Exception:
+        logger.warning("Redis delete failed for key %s", key, exc_info=True)
 
 
 @router.get("", response_model=PaginatedResponse[ProductDetailResponse])
@@ -80,6 +107,11 @@ async def list_products(
     Filters stack — you can combine them:
       GET /products?category=laptops&min_price=500&max_price=1500&on_sale=true
     """
+    cache_key = f"products:list:{page}:{page_size}:{search}:{category}:{shop_id}:{min_price}:{max_price}:{on_sale}"
+    cached_data = await _cache_get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+
     # Base query — only active products, with shop and category loaded
     query = (
         select(Product)
@@ -90,7 +122,8 @@ async def list_products(
 
     # ── Apply filters ────────────────────────────────────────────
     if search:
-        search_filter = Product.name.ilike(f"%{search}%")
+        # PostgreSQL full-text search via tsvector
+        search_filter = Product.search_vector.op("@@")(func.websearch_to_tsquery("english", search))
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
@@ -143,13 +176,18 @@ async def list_products(
         item.category_name = p.category.name if p.category else None
         items.append(item)
 
-    return PaginatedResponse(
+    response = PaginatedResponse(
         items=items,
         total=total,
         page=page,
         page_size=page_size,
         pages=ceil(total / page_size) if total > 0 else 0,
     )
+    
+    # Cache for 60 seconds
+    await _cache_set(cache_key, response.model_dump_json())
+    
+    return response
 
 
 @router.get("/{product_id}", response_model=ProductDetailResponse)
@@ -157,6 +195,11 @@ async def get_product(
     product_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
+    cache_key = f"product:detail:{product_id}"
+    cached_data = await _cache_get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+
     result = await db.execute(
         select(Product)
         .where(Product.id == product_id)
@@ -169,6 +212,10 @@ async def get_product(
     resp = ProductDetailResponse.model_validate(product)
     resp.shop_name = product.shop.name if product.shop else None
     resp.category_name = product.category.name if product.category else None
+    
+    # Cache for 60 seconds
+    await _cache_set(cache_key, resp.model_dump_json())
+    
     return resp
 
 
@@ -195,6 +242,7 @@ async def create_product(
     product = Product(**data.model_dump())
     db.add(product)
     await db.flush()
+    await _cache_delete(f"product:detail:{product.id}")
     return product
 
 
@@ -220,6 +268,7 @@ async def update_product(
         setattr(product, field, value)
 
     await db.flush()
+    await _cache_delete(f"product:detail:{product_id}")
     return product
 
 
@@ -241,3 +290,4 @@ async def delete_product(
 
     await db.delete(product)
     await db.flush()
+    await _cache_delete(f"product:detail:{product_id}")

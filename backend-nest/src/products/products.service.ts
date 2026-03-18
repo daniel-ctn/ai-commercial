@@ -15,7 +15,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { User } from '../users/entities/user.entity';
 import { Shop } from '../shops/entities/shop.entity';
@@ -23,6 +23,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { QueryProductsDto } from './dto/query-products.dto';
 import { PaginatedResponse } from '../common/dto/pagination.dto';
+import { RedisService } from '../redis/redis.service';
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -34,11 +35,19 @@ export class ProductsService {
     private readonly productsRepo: Repository<Product>,
     @InjectRepository(Shop)
     private readonly shopsRepo: Repository<Shop>,
+    private readonly redisService: RedisService,
   ) {}
 
   async findAll(
     query: QueryProductsDto,
   ): Promise<PaginatedResponse<Product>> {
+    const cacheKey = `products:list:${query.page}:${query.page_size}:${query.search || ''}:${query.category || ''}:${query.shop_id || ''}:${query.min_price || ''}:${query.max_price || ''}:${query.on_sale || ''}`;
+    const cachedData = await this.redisService.get(cacheKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      return new PaginatedResponse(parsed.items, parsed.total, parsed.page, parsed.page_size);
+    }
+
     const qb = this.productsRepo
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.shop', 'shop')
@@ -48,15 +57,8 @@ export class ProductsService {
 
     if (query.search) {
       qb.andWhere(
-        new Brackets((sub) => {
-          sub
-            .where('LOWER(product.name) LIKE :search', {
-              search: `%${query.search!.toLowerCase()}%`,
-            })
-            .orWhere('LOWER(product.description) LIKE :search', {
-              search: `%${query.search!.toLowerCase()}%`,
-            });
-        }),
+        `product.search_vector @@ websearch_to_tsquery('english', :search)`,
+        { search: query.search }
       );
     }
 
@@ -98,10 +100,28 @@ export class ProductsService {
     qb.take(query.page_size);
 
     const [items, total] = await qb.getManyAndCount();
-    return new PaginatedResponse(items, total, query.page, query.page_size);
+    const response = new PaginatedResponse(items, total, query.page, query.page_size);
+    
+    await this.redisService.set(cacheKey, JSON.stringify(response), 60);
+    
+    return response;
   }
 
   async findById(id: string): Promise<Product> {
+    const cacheKey = `product:detail:${id}`;
+    const cachedData = await this.redisService.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    const product = await this.findByIdFromDb(id);
+
+    await this.redisService.set(cacheKey, JSON.stringify(product), 60);
+
+    return product;
+  }
+
+  private async findByIdFromDb(id: string): Promise<Product> {
     const product = await this.productsRepo.findOne({
       where: { id },
       relations: ['shop', 'category'],
@@ -126,17 +146,20 @@ export class ProductsService {
     dto: UpdateProductDto,
     user: User,
   ): Promise<Product> {
-    const product = await this.findById(id);
+    const product = await this.findByIdFromDb(id);
     await this.assertShopOwnership(product.shop_id, user);
 
     Object.assign(product, dto);
-    return this.productsRepo.save(product);
+    const saved = await this.productsRepo.save(product);
+    await this.redisService.del(`product:detail:${id}`);
+    return saved;
   }
 
   async remove(id: string, user: User): Promise<void> {
-    const product = await this.findById(id);
+    const product = await this.findByIdFromDb(id);
     await this.assertShopOwnership(product.shop_id, user);
     await this.productsRepo.remove(product);
+    await this.redisService.del(`product:detail:${id}`);
   }
 
   private async assertShopOwnership(

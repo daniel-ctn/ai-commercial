@@ -35,6 +35,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from '@tanstack/react-router'
 import { api, ApiError } from '#/lib/api'
+import { toast } from 'sonner'
 
 // ── Types ────────────────────────────────────────────────────────
 
@@ -160,6 +161,7 @@ export function useLogout() {
       // Clear all cached auth data
       queryClient.setQueryData(['auth', 'me'], null)
       queryClient.invalidateQueries({ queryKey: ['auth'] })
+      toast.success('Successfully logged out')
       router.navigate({ to: '/' })
     },
   })

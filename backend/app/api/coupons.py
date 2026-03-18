@@ -5,6 +5,8 @@ Public users can browse active coupons. Shop owners manage their own.
 """
 
 import uuid
+import json
+import logging
 from datetime import datetime, timezone
 from math import ceil
 
@@ -14,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
+from app.core.redis import redis_client
 from app.core.dependencies import get_current_user
 from app.models.coupon import Coupon
 from app.models.shop import Shop
@@ -22,6 +25,30 @@ from app.schemas.common import PaginatedResponse
 from app.schemas.coupon import CouponCreate, CouponResponse, CouponUpdate
 
 router = APIRouter(prefix="/coupons", tags=["Coupons"])
+
+logger = logging.getLogger(__name__)
+
+
+async def _cache_get(key: str) -> str | None:
+    try:
+        return await redis_client.get(key)
+    except Exception:
+        logger.warning("Redis read failed for key %s", key, exc_info=True)
+        return None
+
+
+async def _cache_set(key: str, value: str, ttl: int = 60) -> None:
+    try:
+        await redis_client.setex(key, ttl, value)
+    except Exception:
+        logger.warning("Redis write failed for key %s", key, exc_info=True)
+
+
+async def _cache_delete(key: str) -> None:
+    try:
+        await redis_client.delete(key)
+    except Exception:
+        logger.warning("Redis delete failed for key %s", key, exc_info=True)
 
 
 @router.get("", response_model=PaginatedResponse[CouponResponse])
@@ -36,6 +63,11 @@ async def list_coupons(
     List coupons. By default only shows currently active and valid ones.
     Pass ?active_only=false to see all (for shop owner dashboards).
     """
+    cache_key = f"coupons:list:{page}:{page_size}:{shop_id}:{active_only}"
+    cached_data = await _cache_get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+
     now = datetime.now(timezone.utc)
 
     query = select(Coupon)
@@ -62,13 +94,18 @@ async def list_coupons(
     )
     coupons = list(result.scalars().all())
 
-    return PaginatedResponse(
+    response = PaginatedResponse(
         items=coupons,
         total=total,
         page=page,
         page_size=page_size,
         pages=ceil(total / page_size) if total > 0 else 0,
     )
+    
+    # Cache for 60 seconds
+    await _cache_set(cache_key, response.model_dump_json())
+    
+    return response
 
 
 @router.get("/{coupon_id}", response_model=CouponResponse)
@@ -76,11 +113,22 @@ async def get_coupon(
     coupon_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
 ):
+    cache_key = f"coupon:detail:{coupon_id}"
+    cached_data = await _cache_get(cache_key)
+    if cached_data:
+        return json.loads(cached_data)
+
     result = await db.execute(select(Coupon).where(Coupon.id == coupon_id))
     coupon = result.scalar_one_or_none()
     if coupon is None:
         raise HTTPException(status_code=404, detail="Coupon not found")
-    return coupon
+
+    resp = CouponResponse.model_validate(coupon)
+    
+    # Cache for 60 seconds
+    await _cache_set(cache_key, resp.model_dump_json())
+    
+    return resp
 
 
 @router.post("", response_model=CouponResponse, status_code=status.HTTP_201_CREATED)
@@ -100,6 +148,7 @@ async def create_coupon(
     coupon = Coupon(**data.model_dump())
     db.add(coupon)
     await db.flush()
+    await _cache_delete(f"coupon:detail:{coupon.id}")
     return coupon
 
 
@@ -125,6 +174,7 @@ async def update_coupon(
         setattr(coupon, field, value)
 
     await db.flush()
+    await _cache_delete(f"coupon:detail:{coupon_id}")
     return coupon
 
 
@@ -146,3 +196,4 @@ async def delete_coupon(
 
     await db.delete(coupon)
     await db.flush()
+    await _cache_delete(f"coupon:detail:{coupon_id}")

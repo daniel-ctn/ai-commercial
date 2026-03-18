@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from '#/components/ui/card'
 import { useRegister, userQueryOptions } from '#/lib/auth'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/auth/register')({
   beforeLoad: async ({ context }) => {
@@ -49,7 +50,14 @@ function RegisterPage() {
       return
     }
 
-    register.mutate({ email, password, name })
+    register.mutate(
+      { email, password, name },
+      {
+        onSuccess: () => {
+          toast.success('Account created successfully!')
+        },
+      }
+    )
   }
 
   return (

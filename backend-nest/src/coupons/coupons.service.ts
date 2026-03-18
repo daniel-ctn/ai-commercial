@@ -13,6 +13,7 @@ import { CreateCouponDto } from './dto/create-coupon.dto';
 import { UpdateCouponDto } from './dto/update-coupon.dto';
 import { QueryCouponsDto } from './dto/query-coupons.dto';
 import { PaginatedResponse } from '../common/dto/pagination.dto';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class CouponsService {
@@ -21,9 +22,17 @@ export class CouponsService {
     private readonly couponsRepo: Repository<Coupon>,
     @InjectRepository(Shop)
     private readonly shopsRepo: Repository<Shop>,
+    private readonly redisService: RedisService,
   ) {}
 
   async findAll(query: QueryCouponsDto): Promise<PaginatedResponse<Coupon>> {
+    const cacheKey = `coupons:list:${query.page}:${query.page_size}:${query.shop_id || ''}:${query.active_only}`;
+    const cachedData = await this.redisService.get(cacheKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      return new PaginatedResponse(parsed.items, parsed.total, parsed.page, parsed.page_size);
+    }
+
     const qb = this.couponsRepo.createQueryBuilder('coupon');
 
     if (query.shop_id) {
@@ -42,10 +51,27 @@ export class CouponsService {
     qb.take(query.page_size);
 
     const [items, total] = await qb.getManyAndCount();
-    return new PaginatedResponse(items, total, query.page, query.page_size);
+    const response = new PaginatedResponse(items, total, query.page, query.page_size);
+    
+    await this.redisService.set(cacheKey, JSON.stringify(response), 60);
+    
+    return response;
   }
 
   async findById(id: string): Promise<Coupon> {
+    const cacheKey = `coupon:detail:${id}`;
+    const cachedData = await this.redisService.get(cacheKey);
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    const coupon = await this.findByIdFromDb(id);
+
+    await this.redisService.set(cacheKey, JSON.stringify(coupon), 60);
+    return coupon;
+  }
+
+  private async findByIdFromDb(id: string): Promise<Coupon> {
     const coupon = await this.couponsRepo.findOne({ where: { id } });
     if (!coupon) {
       throw new NotFoundException('Coupon not found');
@@ -69,7 +95,7 @@ export class CouponsService {
   }
 
   async update(id: string, dto: UpdateCouponDto, user: User): Promise<Coupon> {
-    const coupon = await this.findById(id);
+    const coupon = await this.findByIdFromDb(id);
     await this.assertShopOwnership(coupon.shop_id, user);
 
     const discountType = dto.discount_type ?? coupon.discount_type;
@@ -85,13 +111,16 @@ export class CouponsService {
     if (valid_from) coupon.valid_from = new Date(valid_from);
     if (valid_until) coupon.valid_until = new Date(valid_until);
 
-    return this.couponsRepo.save(coupon);
+    const saved = await this.couponsRepo.save(coupon);
+    await this.redisService.del(`coupon:detail:${id}`);
+    return saved;
   }
 
   async remove(id: string, user: User): Promise<void> {
-    const coupon = await this.findById(id);
+    const coupon = await this.findByIdFromDb(id);
     await this.assertShopOwnership(coupon.shop_id, user);
     await this.couponsRepo.remove(coupon);
+    await this.redisService.del(`coupon:detail:${id}`);
   }
 
   private async assertShopOwnership(

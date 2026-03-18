@@ -9,6 +9,7 @@ import { ChatWidget } from '../components/chat/ChatWidget'
 import CompareBar from '../components/CompareBar'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
+import { Toaster } from '../components/ui/sonner'
 
 import TanStackQueryProvider from '../integrations/tanstack-query/root-provider'
 import TanStackQueryDevtools from '../integrations/tanstack-query/devtools'
@@ -117,6 +118,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             />
           )}
         </TanStackQueryProvider>
+        <Toaster richColors position="top-right" />
         <Scripts />
       </body>
     </html>

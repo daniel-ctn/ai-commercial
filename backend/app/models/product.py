@@ -25,8 +25,8 @@ Use `Numeric(precision, scale)` instead:
 import uuid
 from datetime import datetime
 
-from sqlalchemy import String, Text, Boolean, DateTime, Numeric, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import String, Text, Boolean, DateTime, Numeric, ForeignKey, func, Index, Computed
+from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -34,6 +34,10 @@ from app.core.database import Base
 
 class Product(Base):
     __tablename__ = "products"
+
+    __table_args__ = (
+        Index("idx_product_search_vector", "search_vector", postgresql_using="gin"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -62,6 +66,16 @@ class Product(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+    # Full-text search vector
+    search_vector: Mapped[str | None] = mapped_column(
+        TSVECTOR,
+        Computed(
+            "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
+            "setweight(to_tsvector('english', coalesce(description, '')), 'B')",
+            persisted=True
+        )
     )
 
     # ── Relationships ────────────────────────────────────────────

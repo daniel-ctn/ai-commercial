@@ -28,6 +28,7 @@ import {
 import { Separator } from '#/components/ui/separator'
 import { useLogin, userQueryOptions } from '#/lib/auth'
 import { api } from '#/lib/api'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/auth/login')({
   beforeLoad: async ({ context }) => {
@@ -46,7 +47,14 @@ function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    login.mutate({ email, password })
+    login.mutate(
+      { email, password },
+      {
+        onSuccess: () => {
+          toast.success('Successfully logged in!')
+        },
+      }
+    )
   }
 
   const handleGoogleLogin = async () => {
@@ -54,7 +62,7 @@ function LoginPage() {
       const data = await api.get<{ url: string }>('/auth/google')
       window.location.href = data.url
     } catch {
-      // Google OAuth not configured — button will show the error
+      toast.error('Google OAuth not configured')
     }
   }
 

@@ -9,13 +9,14 @@
  * Upstash Redis uses a standard Redis protocol, so ioredis works perfectly.
  * The connection URL format: rediss://default:TOKEN@HOST:PORT
  */
-import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly client: Redis;
+  private readonly logger = new Logger(RedisService.name);
 
   constructor(private readonly config: ConfigService) {
     const url = this.config.getOrThrow<string>('UPSTASH_REDIS_URL');
@@ -31,19 +32,32 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async get(key: string): Promise<string | null> {
-    return this.client.get(key);
+    try {
+      return await this.client.get(key);
+    } catch (err) {
+      this.logger.warn(`Redis read failed for key ${key}: ${err}`);
+      return null;
+    }
   }
 
   async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
-    if (ttlSeconds) {
-      await this.client.set(key, value, 'EX', ttlSeconds);
-    } else {
-      await this.client.set(key, value);
+    try {
+      if (ttlSeconds) {
+        await this.client.set(key, value, 'EX', ttlSeconds);
+      } else {
+        await this.client.set(key, value);
+      }
+    } catch (err) {
+      this.logger.warn(`Redis write failed for key ${key}: ${err}`);
     }
   }
 
   async del(key: string): Promise<void> {
-    await this.client.del(key);
+    try {
+      await this.client.del(key);
+    } catch (err) {
+      this.logger.warn(`Redis delete failed for key ${key}: ${err}`);
+    }
   }
 
   async incr(key: string): Promise<number> {

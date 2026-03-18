@@ -95,7 +95,7 @@ function ProductsPage() {
       <h1 className="display-title mb-6 text-3xl font-bold">Products</h1>
 
       {/* ── Filters ────────────────────────────────────────────── */}
-      <div className="mb-8 flex flex-wrap gap-3">
+      <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           placeholder="Search products..."
           className="w-full sm:w-64"
@@ -110,7 +110,7 @@ function ProductsPage() {
 
         {/* Category filter */}
         <select
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:w-auto"
           value={filters.category ?? ''}
           onChange={(e) =>
             updateFilters({ category: e.target.value || undefined })
@@ -131,56 +131,62 @@ function ProductsPage() {
           ))}
         </select>
 
-        {/* Price range */}
-        <Input
-          type="number"
-          placeholder="Min $"
-          className="w-24"
-          value={minPriceInput}
-          onChange={(e) => setMinPriceInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const val = Number(minPriceInput)
-              updateFilters({ min_price: val || undefined })
-            }
-          }}
-        />
-        <Input
-          type="number"
-          placeholder="Max $"
-          className="w-24"
-          value={maxPriceInput}
-          onChange={(e) => setMaxPriceInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const val = Number(maxPriceInput)
-              updateFilters({ max_price: val || undefined })
-            }
-          }}
-        />
+        <div className="flex w-full gap-2 sm:w-auto sm:gap-3">
+          {/* Price range */}
+          <Input
+            type="number"
+            placeholder="Min $"
+            className="flex-1 sm:w-24 sm:flex-none"
+            value={minPriceInput}
+            onChange={(e) => setMinPriceInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = Number(minPriceInput)
+                updateFilters({ min_price: val || undefined })
+              }
+            }}
+          />
+          <Input
+            type="number"
+            placeholder="Max $"
+            className="flex-1 sm:w-24 sm:flex-none"
+            value={maxPriceInput}
+            onChange={(e) => setMaxPriceInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const val = Number(maxPriceInput)
+                updateFilters({ max_price: val || undefined })
+              }
+            }}
+          />
+        </div>
 
-        <Button
-          variant={filters.on_sale ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => updateFilters({ on_sale: !filters.on_sale || undefined })}
-        >
-          On Sale
-        </Button>
-
-        {/* Clear all */}
-        {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale) && (
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <Button
-            variant="ghost"
+            variant={filters.on_sale ? 'default' : 'outline'}
             size="sm"
-            onClick={() =>
-              navigate({
-                search: {},
-              })
-            }
+            className="flex-1 sm:flex-none"
+            onClick={() => updateFilters({ on_sale: !filters.on_sale || undefined })}
           >
-            Clear filters
+            On Sale
           </Button>
-        )}
+
+          {/* Clear all */}
+          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1 sm:flex-none"
+              onClick={() =>
+                navigate({
+                  search: {},
+                })
+              }
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ── Results ────────────────────────────────────────────── */}

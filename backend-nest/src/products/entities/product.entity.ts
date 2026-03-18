@@ -66,6 +66,15 @@ export class Product {
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;
 
+  @Column({
+    type: 'tsvector',
+    nullable: true,
+    select: false,
+    generatedType: 'STORED',
+    asExpression: "setweight(to_tsvector('english', coalesce(name, '')), 'A') || setweight(to_tsvector('english', coalesce(description, '')), 'B')",
+  })
+  search_vector: string;
+
   @ManyToOne(() => Shop, (shop) => shop.products, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'shop_id' })
   shop: Shop;
