@@ -12,8 +12,10 @@
 
 import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
+import { ArrowLeftRight, Check } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardFooter } from '#/components/ui/card'
+import { useCompareList } from '#/lib/compare'
 import type { Product } from '#/lib/types'
 
 interface ProductCardProps {
@@ -21,6 +23,8 @@ interface ProductCardProps {
 }
 
 export default memo(function ProductCard({ product }: ProductCardProps) {
+  const { isInCompare, toggle, isFull } = useCompareList()
+  const inCompare = isInCompare(product.id)
   const isOnSale = product.original_price && product.original_price > product.price
   const discount = isOnSale
     ? Math.round((1 - product.price / product.original_price!) * 100)
@@ -33,7 +37,6 @@ export default memo(function ProductCard({ product }: ProductCardProps) {
       className="block no-underline"
     >
       <Card className="group h-full overflow-hidden transition hover:shadow-lg">
-        {/* Image placeholder */}
         <div className="relative aspect-square bg-muted">
           {product.image_url ? (
             <img
@@ -51,6 +54,23 @@ export default memo(function ProductCard({ product }: ProductCardProps) {
               -{discount}%
             </Badge>
           )}
+          <button
+            type="button"
+            title={inCompare ? 'Remove from compare' : isFull ? 'Compare list full (max 5)' : 'Add to compare'}
+            disabled={!inCompare && isFull}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              toggle(product.id)
+            }}
+            className={`absolute right-2 top-2 rounded-full p-1.5 shadow-sm transition-colors ${
+              inCompare
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-background/80 text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-40'
+            }`}
+          >
+            {inCompare ? <Check className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}
+          </button>
         </div>
 
         <CardContent className="p-4">

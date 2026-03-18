@@ -21,6 +21,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ShopsModule } from './shops/shops.module';
 import { ProductsModule } from './products/products.module';
 import { CouponsModule } from './coupons/coupons.module';
+import { CompareModule } from './compare/compare.module';
 import { AdminModule } from './admin/admin.module';
 import { HealthModule } from './health/health.module';
 import { validate } from './config/env.validation';
@@ -47,6 +48,7 @@ import { validate } from './config/env.validation';
     ShopsModule,
     ProductsModule,
     CouponsModule,
+    CompareModule,
     AdminModule,
     HealthModule,
   ],

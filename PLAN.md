@@ -34,7 +34,7 @@ Both backends connect to the same **Neon PostgreSQL** database and **Upstash Red
 - [x] Phase 4: Core CRUD APIs & pages
 - [x] Phase 5: Admin dashboard
 - [ ] Phase 6: AI Chatbot
-- [ ] Phase 7: Product comparison
+- [x] Phase 7: Product comparison
 - [ ] Phase 8: Polish & production readiness
 
 ### NestJS Backend (Learning)
@@ -400,11 +400,24 @@ The AI will receive the tool results and formulate natural-language responses wi
 - Frontend: Floating chat widget with message streaming
 - Frontend: Rich message rendering (product cards, comparison tables, coupon badges)
 
-### Phase 7: Product Comparison
+### Phase 7: Product Comparison (DONE)
 
-- Backend: Comparison endpoint that returns normalized product attributes
-- Frontend: Comparison page with side-by-side view
-- Integration with chatbot (AI can suggest comparisons)
+- Backend (FastAPI): `GET /compare?ids=uuid1&ids=uuid2` — loads 2–5 products with shop/category joins, returns normalized attributes + `attribute_keys` (union of all JSONB attribute keys across compared products, sorted alphabetically)
+- Backend (NestJS): `CompareModule` with controller, service, and `QueryCompareDto` (class-validator `@IsArray` + `@ArrayMinSize(2)` + `@ArrayMaxSize(5)`)
+- Frontend: Compare state via `useSyncExternalStore` module-level store (`lib/compare.ts`) — no context provider needed
+- Frontend: Compare toggle button on `ProductCard` (top-right corner, stops event propagation to avoid triggering the Link)
+- Frontend: `/compare` route with side-by-side table — sticky first column for labels, dynamic attribute rows from `attribute_keys`
+- Frontend: Floating `CompareBar` at bottom of screen (appears when products are selected, navigates to `/compare`)
+- Frontend: "Compare" link in Header navigation
+
+**FastAPI learning notes**:
+- `Query(...)` with `list[uuid.UUID]` accepts repeated query params (`?ids=x&ids=y`) — like `searchParams.getAll("ids")` in the Web API
+- JSONB attribute normalization: collect all keys across products into a `set`, sort them — the frontend uses this to render consistent table rows even when products have different attribute schemas
+
+**NestJS learning notes**:
+- `@Transform` from `class-transformer` handles the edge case where a single query param value arrives as a string instead of an array
+- `Repository.find({ where: { id: In(ids) } })` with TypeORM's `In` operator — like Prisma's `where: { id: { in: ids } }`
+- Module exports `CompareService` so the AI chatbot module can reuse comparison logic later
 
 ### Phase 8: Polish & Production Readiness
 

@@ -30,6 +30,7 @@ import type {
   AdminStats,
   AdminUser,
   Category,
+  CompareResponse,
   Coupon,
   PaginatedResponse,
   Product,
@@ -143,6 +144,19 @@ export const couponsQueryOptions = (filters: CouponFilters = {}) => {
       api.get<PaginatedResponse<Coupon>>(
         `/coupons${queryString ? `?${queryString}` : ''}`,
       ),
+  })
+}
+
+// ── Compare ─────────────────────────────────────────────────────
+
+export const compareQueryOptions = (ids: string[]) => {
+  const params = new URLSearchParams()
+  ids.forEach((id) => params.append('ids', id))
+
+  return queryOptions({
+    queryKey: ['compare', ...ids.sort()],
+    queryFn: () => api.get<CompareResponse>(`/compare?${params.toString()}`),
+    enabled: ids.length >= 2,
   })
 }
 

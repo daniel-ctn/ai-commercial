@@ -122,6 +122,26 @@ export interface AdminCoupon extends Coupon {
   shop_name: string | null
 }
 
+// ── Compare ────────────────────────────────────────────────────
+
+export interface CompareProductItem {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  original_price: number | null
+  image_url: string | null
+  attributes: Record<string, string | number | boolean> | null
+  shop_name: string | null
+  category_name: string | null
+  on_sale: boolean
+}
+
+export interface CompareResponse {
+  products: CompareProductItem[]
+  attribute_keys: string[]
+}
+
 // ── Chat ────────────────────────────────────────────────────────
 
 export interface ChatMessage {
