@@ -9,6 +9,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import {
   ClassSerializerInterceptor,
   ForbiddenException,
+  HttpStatus,
   Logger,
   RequestMethod,
   ValidationPipe,
@@ -41,6 +42,7 @@ async function bootstrap() {
     exclude: [
       { path: 'health', method: RequestMethod.GET },
       { path: 'health/ready', method: RequestMethod.GET },
+      { path: 'health/features', method: RequestMethod.GET },
     ],
   });
 
@@ -89,6 +91,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
+      errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
     }),
   );
 

@@ -107,7 +107,7 @@ app.include_router(chat_router, prefix=settings.api_prefix)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "app": settings.app_name}
+    return {"status": "ok", "app": settings.app_name, "backend": "fastapi"}
 
 
 @app.get("/health/ready")
@@ -134,5 +134,28 @@ async def readiness_check():
     all_ok = all(v == "ok" for v in checks.values())
     return JSONResponse(
         status_code=status.HTTP_200_OK if all_ok else status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={"status": "ok" if all_ok else "degraded", **checks},
+        content={
+            "status": "ok" if all_ok else "degraded",
+            "checks": checks,
+            "features": _get_features(),
+        },
     )
+
+
+@app.get("/health/features")
+async def get_features():
+    return _get_features()
+
+
+def _get_features() -> dict:
+    return {
+        "auth": True,
+        "google_oauth": bool(settings.google_client_id),
+        "chat": bool(settings.gemini_api_key),
+        "products": True,
+        "shops": True,
+        "coupons": True,
+        "compare": True,
+        "admin": True,
+        "full_text_search": True,
+    }

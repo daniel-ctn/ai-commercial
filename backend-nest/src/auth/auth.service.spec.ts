@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { RedisOperationError } from '../redis/redis.service';
 import { AuthService } from './auth.service';
 import type { User } from '../users/entities/user.entity';
 
@@ -14,7 +18,7 @@ type JwtVerifyOptions = {
   ignoreExpiration?: boolean;
 };
 
-function createAuthService() {
+function createAuthService(options?: { failReservation?: boolean }) {
   const user = {
     id: 'user-1',
     email: 'owner@example.com',
@@ -56,6 +60,9 @@ function createAuthService() {
     set: async () => undefined,
     exists: async () => false,
     setIfAbsent: async () => {
+      if (options?.failReservation) {
+        throw new RedisOperationError('Redis unavailable');
+      }
       reservationAttempts += 1;
       return reservationAttempts === 1;
     },
@@ -92,4 +99,17 @@ test('refreshTokens blacklists a refresh token on first use and rejects replays'
   );
 
   assert.equal(getReservationAttempts(), 2);
+});
+
+test('refreshTokens returns 503 when refresh token replay protection is unavailable', async () => {
+  const { service } = createAuthService({ failReservation: true });
+
+  await assert.rejects(
+    service.refreshTokens('refresh-token'),
+    (error: unknown) => {
+      assert.ok(error instanceof ServiceUnavailableException);
+      assert.equal(error.message, 'Token refresh temporarily unavailable');
+      return true;
+    },
+  );
 });

@@ -14,6 +14,7 @@
 import {
   Injectable,
   ConflictException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -21,6 +22,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RedisService } from '../redis/redis.service';
+import { RedisOperationError } from '../redis/redis.service';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -104,35 +106,48 @@ export class AuthService {
   }
 
   async refreshTokens(refreshToken: string) {
+    let payload: JwtPayload;
     try {
-      const payload = this.jwtService.verify<JwtPayload>(refreshToken);
-      if (payload.type !== 'refresh') {
-        throw new UnauthorizedException();
-      }
+      payload = this.jwtService.verify<JwtPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
-      const user = await this.usersService.findById(payload.sub);
-      if (!user) {
-        throw new UnauthorizedException();
-      }
+    if (payload.type !== 'refresh') {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
-      const ttlSeconds = this.getRemainingTtlSeconds(refreshToken);
-      if (ttlSeconds <= 0) {
-        throw new UnauthorizedException();
-      }
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
 
-      const wasReserved = await this.redis.setIfAbsent(
+    const ttlSeconds = this.getRemainingTtlSeconds(refreshToken);
+    if (ttlSeconds <= 0) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    let wasReserved: boolean;
+    try {
+      wasReserved = await this.redis.setIfAbsent(
         `blacklist:${refreshToken}`,
         '1',
         ttlSeconds,
       );
-      if (!wasReserved) {
-        throw new UnauthorizedException();
+    } catch (error) {
+      if (error instanceof RedisOperationError) {
+        throw new ServiceUnavailableException(
+          'Token refresh temporarily unavailable',
+        );
       }
+      throw error;
+    }
 
-      return { user, tokens: this.createTokens(user) };
-    } catch {
+    if (!wasReserved) {
       throw new UnauthorizedException('Invalid refresh token');
     }
+
+    return { user, tokens: this.createTokens(user) };
   }
 
   async getOrCreateOAuthUser(

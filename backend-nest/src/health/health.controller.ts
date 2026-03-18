@@ -21,4 +21,9 @@ export class HealthController {
 
     return readiness;
   }
+
+  @Get('features')
+  getFeatures() {
+    return this.healthService.getFeatures();
+  }
 }

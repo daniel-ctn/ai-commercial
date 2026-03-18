@@ -13,6 +13,13 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
+export class RedisOperationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RedisOperationError';
+  }
+}
+
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly client: Redis;
@@ -61,16 +68,30 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async incr(key: string): Promise<number> {
-    return this.client.incr(key);
+    try {
+      return await this.client.incr(key);
+    } catch (err) {
+      this.logger.warn(`Redis incr failed for key ${key}: ${err}`);
+      return 0;
+    }
   }
 
   async expire(key: string, seconds: number): Promise<void> {
-    await this.client.expire(key, seconds);
+    try {
+      await this.client.expire(key, seconds);
+    } catch (err) {
+      this.logger.warn(`Redis expire failed for key ${key}: ${err}`);
+    }
   }
 
   async exists(key: string): Promise<boolean> {
-    const result = await this.client.exists(key);
-    return result === 1;
+    try {
+      const result = await this.client.exists(key);
+      return result === 1;
+    } catch (err) {
+      this.logger.warn(`Redis exists failed for key ${key}: ${err}`);
+      return false;
+    }
   }
 
   async setIfAbsent(
@@ -78,8 +99,13 @@ export class RedisService implements OnModuleDestroy {
     value: string,
     ttlSeconds: number,
   ): Promise<boolean> {
-    const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
-    return result === 'OK';
+    try {
+      const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+      return result === 'OK';
+    } catch (err) {
+      this.logger.warn(`Redis setIfAbsent failed for key ${key}: ${err}`);
+      throw new RedisOperationError(`Redis setIfAbsent failed for key ${key}`);
+    }
   }
 
   async ping(): Promise<string> {

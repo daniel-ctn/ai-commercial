@@ -13,8 +13,15 @@
  * which reads the JWT from the cookie, verifies it, and attaches
  * the user to request.user.
  */
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard('jwt') {}
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  handleRequest<T>(err: Error | null, user: T): T {
+    if (err || !user) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+    return user;
+  }
+}

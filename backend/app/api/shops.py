@@ -48,7 +48,7 @@ async def _verify_shop_owner(
     if shop is None:
         raise HTTPException(status_code=404, detail="Shop not found")
     if shop.owner_id != user.id and user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     return shop
 

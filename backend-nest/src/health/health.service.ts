@@ -15,6 +15,7 @@ export class HealthService {
     return {
       status: 'ok',
       app: this.config.get('APP_NAME', 'AI Commercial'),
+      backend: 'nestjs',
     };
   }
 
@@ -39,6 +40,21 @@ export class HealthService {
     return {
       status: allOk ? 'ok' : 'degraded',
       checks,
+      features: this.getFeatures(),
+    };
+  }
+
+  getFeatures() {
+    return {
+      auth: true,
+      google_oauth: !!this.config.get('GOOGLE_CLIENT_ID'),
+      chat: !!this.config.get('GEMINI_API_KEY'),
+      products: true,
+      shops: true,
+      coupons: true,
+      compare: true,
+      admin: true,
+      full_text_search: true,
     };
   }
 

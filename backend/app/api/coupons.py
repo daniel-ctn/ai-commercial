@@ -161,7 +161,7 @@ async def create_coupon(
     if shop is None:
         raise HTTPException(status_code=404, detail="Shop not found")
     if shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     coupon = Coupon(**data.model_dump())
     db.add(coupon)
@@ -186,7 +186,7 @@ async def update_coupon(
     if coupon is None:
         raise HTTPException(status_code=404, detail="Coupon not found")
     if coupon.shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -212,7 +212,7 @@ async def delete_coupon(
     if coupon is None:
         raise HTTPException(status_code=404, detail="Coupon not found")
     if coupon.shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     await db.delete(coupon)
     await db.flush()

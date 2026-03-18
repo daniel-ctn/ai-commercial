@@ -253,7 +253,7 @@ async def create_product(
     if shop is None:
         raise HTTPException(status_code=404, detail="Shop not found")
     if shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     # Verify category exists
     cat_result = await db.execute(select(Category).where(Category.id == data.category_id))
@@ -283,7 +283,7 @@ async def update_product(
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     if product.shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     update_data = data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -309,7 +309,7 @@ async def delete_product(
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     if product.shop.owner_id != current_user.id and current_user.role != "admin":
-        raise HTTPException(status_code=403, detail="Not your shop")
+        raise HTTPException(status_code=403, detail="You do not own this shop")
 
     await db.delete(product)
     await db.flush()
