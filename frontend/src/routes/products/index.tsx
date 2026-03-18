@@ -28,6 +28,7 @@ import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
 import { productsQueryOptions, categoriesQueryOptions } from '#/lib/queries'
+import { useFavoriteIds } from '#/lib/favorites'
 
 interface ProductSearch {
   page?: number
@@ -79,6 +80,7 @@ function ProductsPage() {
   )
 
   const { data: categories } = useQuery(categoriesQueryOptions())
+  const { isFavorite, toggle: toggleFavorite } = useFavoriteIds()
 
   const updateFilters = (updates: Partial<ProductSearch>) => {
     navigate({
@@ -208,7 +210,12 @@ function ProductsPage() {
 
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {data.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite={isFavorite(product.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </div>
 
@@ -238,11 +245,28 @@ function ProductsPage() {
           )}
         </>
       ) : (
-        <div className="py-16 text-center">
-          <p className="text-lg text-muted-foreground">No products found</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Try adjusting your filters or search terms
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <div className="rounded-full bg-muted p-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          </div>
+          <p className="text-lg font-medium text-muted-foreground">
+            No products match your search
           </p>
+          <p className="max-w-md text-sm text-muted-foreground">
+            {filters.search
+              ? `No results for "${filters.search}". Try a different search term or remove some filters.`
+              : 'Try broadening your filters — remove a category or price range to see more results.'}
+          </p>
+          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={() => navigate({ search: {} })}
+            >
+              Clear all filters
+            </Button>
+          )}
         </div>
       )}
     </main>

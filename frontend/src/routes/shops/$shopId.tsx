@@ -20,6 +20,7 @@ import { Separator } from '#/components/ui/separator'
 import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
 import { shopQueryOptions, productsQueryOptions, couponsQueryOptions } from '#/lib/queries'
+import { useFavoriteIds } from '#/lib/favorites'
 
 export const Route = createFileRoute('/shops/$shopId')({
   loader: ({ context, params }) =>
@@ -35,6 +36,7 @@ function ShopDetailPage() {
     productsQueryOptions({ shop_id: shopId, page_size: 12 }),
   )
   const { data: coupons } = useQuery(couponsQueryOptions({ shop_id: shopId }))
+  const { isFavorite, toggle: toggleFavorite } = useFavoriteIds()
 
   if (shopLoading || !shop) {
     return (
@@ -140,7 +142,12 @@ function ShopDetailPage() {
         {products && products.items.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {products.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite={isFavorite(product.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </div>
         ) : (

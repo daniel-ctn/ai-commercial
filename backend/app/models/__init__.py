@@ -22,6 +22,7 @@ from app.models.category import Category
 from app.models.product import Product
 from app.models.coupon import Coupon
 from app.models.chat import ChatSession, ChatMessage
+from app.models.favorite import Favorite
 
 __all__ = [
     "User",
@@ -31,4 +32,5 @@ __all__ = [
     "Coupon",
     "ChatSession",
     "ChatMessage",
+    "Favorite",
 ]

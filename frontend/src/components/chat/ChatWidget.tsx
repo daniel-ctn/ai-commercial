@@ -1,15 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MessageSquare, X, Send, Loader2, RotateCcw, Sparkles } from 'lucide-react'
+import { MessageSquare, X, Send, Loader2, Sparkles, History, Plus, Trash2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { useAuth } from '#/lib/auth'
-import { useChat } from '#/lib/chat'
+import { useChat, chatApi } from '#/lib/chat'
 import { ChatMessageBubble } from '#/components/chat/ChatMessage'
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
   const { user } = useAuth()
-  const { messages, isLoading, statusMessage, sendMessage, clearChat } = useChat()
+  const {
+    messages,
+    sessionId,
+    sessions,
+    isLoading,
+    statusMessage,
+    sendMessage,
+    loadSessions,
+    selectSession,
+    clearChat,
+  } = useChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -18,8 +29,12 @@ export function ChatWidget() {
   }, [messages, statusMessage])
 
   useEffect(() => {
-    if (isOpen) inputRef.current?.focus()
-  }, [isOpen])
+    if (isOpen && user) {
+      inputRef.current?.focus()
+      loadSessions()
+    }
+    if (!isOpen) setShowHistory(false)
+  }, [isOpen, user, loadSessions])
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -68,17 +83,79 @@ export function ChatWidget() {
                 </p>
               </div>
             </div>
-            {messages.length > 0 && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                onClick={clearChat}
-                title="New conversation"
-              >
-                <RotateCcw className="size-3.5" />
-              </Button>
+            {user && (
+              <div className="flex items-center gap-1">
+                {sessions.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => setShowHistory(!showHistory)}
+                    title="Chat history"
+                  >
+                    <History className="size-3.5" />
+                  </Button>
+                )}
+                {messages.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={() => { clearChat(); setShowHistory(false) }}
+                    title="New conversation"
+                  >
+                    <Plus className="size-3.5" />
+                  </Button>
+                )}
+              </div>
             )}
           </div>
+
+          {/* Session History Panel */}
+          {showHistory && (
+            <div className="border-b border-[var(--line)] bg-[var(--surface-strong)]/50">
+              <div className="max-h-48 overflow-y-auto px-3 py-2">
+                <p className="mb-1.5 text-xs font-medium text-[var(--sea-ink-soft)]">
+                  Previous conversations
+                </p>
+                <div className="space-y-1">
+                  {sessions.map((s) => {
+                    const preview = s.messages[0]?.content ?? 'Empty session'
+                    const isActive = s.id === sessionId
+                    return (
+                      <div
+                        key={s.id}
+                        className={`group flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors ${
+                          isActive
+                            ? 'bg-[var(--lagoon)]/10 text-[var(--lagoon)]'
+                            : 'text-[var(--sea-ink)] hover:bg-[var(--surface-strong)]'
+                        }`}
+                      >
+                        <button
+                          className="min-w-0 flex-1 text-left"
+                          onClick={() => { selectSession(s); setShowHistory(false) }}
+                        >
+                          <span className="block truncate">{preview}</span>
+                          <span className="text-[var(--sea-ink-soft)]">
+                            {new Date(s.created_at).toLocaleDateString()}
+                          </span>
+                        </button>
+                        <button
+                          className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={async () => {
+                            await chatApi.deleteSession(s.id)
+                            loadSessions()
+                            if (s.id === sessionId) clearChat()
+                          }}
+                          title="Delete session"
+                        >
+                          <Trash2 className="size-3 text-[var(--sea-ink-soft)] hover:text-red-500" />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3">

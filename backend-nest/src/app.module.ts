@@ -24,6 +24,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { CompareModule } from './compare/compare.module';
 import { AdminModule } from './admin/admin.module';
 import { ChatModule } from './chat/chat.module';
+import { FavoritesModule } from './favorites/favorites.module';
 import { HealthModule } from './health/health.module';
 import { validate } from './config/env.validation';
 
@@ -51,6 +52,7 @@ import { validate } from './config/env.validation';
     CouponsModule,
     CompareModule,
     ChatModule,
+    FavoritesModule,
     AdminModule,
     HealthModule,
   ],

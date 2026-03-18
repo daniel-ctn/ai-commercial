@@ -132,19 +132,19 @@ Make the product feel more advanced and less session-bound.
 
 ### Deliverables
 
-- Persist compare selections across refresh and browser restarts
-- Add saved compare lists for authenticated users
-- Persist chat session history in the UI and allow session switching
-- Add recent searches and recently viewed products
-- Add favorites or wishlist support
-- Add saved filters and saved deal alerts
-- Improve empty states and recovery flows for chat, compare, and search
+- [x] Persist compare selections across refresh and browser restarts
+- [ ] Add saved compare lists for authenticated users
+- [x] Persist chat session history in the UI and allow session switching
+- [x] Add recently viewed products (localStorage + home page + compare empty state)
+- [x] Add favorites or wishlist support (backend + frontend with heart toggle)
+- [ ] Add saved filters and saved deal alerts
+- [x] Improve empty states and recovery flows for chat, compare, and search
 
 ### Success criteria
 
-- Users can leave and return without losing important state
-- Product interactions feel account-based instead of temporary
-- High-value workflows become repeatable
+- [x] Users can leave and return without losing important state
+- [x] Product interactions feel account-based instead of temporary
+- [ ] High-value workflows become repeatable
 
 ## Phase 3: Advanced AI Commerce Features
 

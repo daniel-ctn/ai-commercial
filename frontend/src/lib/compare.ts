@@ -1,13 +1,39 @@
 import { useCallback, useSyncExternalStore } from 'react'
 
 const MAX_COMPARE_ITEMS = 5
+const STORAGE_KEY = 'ai-commercial:compare-ids'
 
 type Listener = () => void
 
-let compareIds: string[] = []
+let compareIds: string[] = loadFromStorage()
 const listeners = new Set<Listener>()
 
+function loadFromStorage(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.every((v) => typeof v === 'string')) {
+      return parsed.slice(0, MAX_COMPARE_ITEMS)
+    }
+    return []
+  } catch {
+    return []
+  }
+}
+
+function saveToStorage(ids: string[]) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids))
+  } catch {
+    // Storage full or unavailable — silently ignore
+  }
+}
+
 function emitChange() {
+  saveToStorage(compareIds)
   for (const listener of listeners) listener()
 }
 

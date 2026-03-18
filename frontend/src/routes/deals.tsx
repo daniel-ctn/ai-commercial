@@ -12,6 +12,7 @@ import { Separator } from '#/components/ui/separator'
 import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
 import { couponsQueryOptions, productsQueryOptions } from '#/lib/queries'
+import { useFavoriteIds } from '#/lib/favorites'
 
 export const Route = createFileRoute('/deals')({
   component: DealsPage,
@@ -24,6 +25,7 @@ function DealsPage() {
   const { data: saleProducts, isLoading: productsLoading } = useQuery(
     productsQueryOptions({ on_sale: true, page_size: 12 }),
   )
+  const { isFavorite, toggle: toggleFavorite } = useFavoriteIds()
 
   return (
     <main className="page-wrap py-8">
@@ -117,7 +119,12 @@ function DealsPage() {
         ) : saleProducts && saleProducts.items.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {saleProducts.items.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite={isFavorite(product.id)}
+                onToggleFavorite={toggleFavorite}
+              />
             ))}
           </div>
         ) : (

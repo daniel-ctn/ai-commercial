@@ -12,7 +12,7 @@
 
 import { memo } from 'react'
 import { Link } from '@tanstack/react-router'
-import { ArrowLeftRight, Check } from 'lucide-react'
+import { ArrowLeftRight, Check, Heart } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Card, CardContent, CardFooter } from '#/components/ui/card'
 import { useCompareList } from '#/lib/compare'
@@ -20,9 +20,11 @@ import type { Product } from '#/lib/types'
 
 interface ProductCardProps {
   product: Product
+  isFavorite?: boolean
+  onToggleFavorite?: (productId: string) => void
 }
 
-export default memo(function ProductCard({ product }: ProductCardProps) {
+export default memo(function ProductCard({ product, isFavorite, onToggleFavorite }: ProductCardProps) {
   const { isInCompare, toggle, isFull } = useCompareList()
   const inCompare = isInCompare(product.id)
   const isOnSale = product.original_price && product.original_price > product.price
@@ -71,6 +73,24 @@ export default memo(function ProductCard({ product }: ProductCardProps) {
           >
             {inCompare ? <Check className="h-4 w-4" /> : <ArrowLeftRight className="h-4 w-4" />}
           </button>
+          {onToggleFavorite && (
+            <button
+              type="button"
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onToggleFavorite(product.id)
+              }}
+              className={`absolute right-2 bottom-2 rounded-full p-1.5 shadow-sm transition-colors ${
+                isFavorite
+                  ? 'bg-red-500 text-white'
+                  : 'bg-background/80 text-muted-foreground hover:bg-background hover:text-red-500'
+              }`}
+            >
+              <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+            </button>
+          )}
         </div>
 
         <CardContent className="p-4">

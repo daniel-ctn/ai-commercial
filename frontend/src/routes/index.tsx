@@ -1,8 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { Clock } from 'lucide-react'
+import { useRecentlyViewed, clearRecentlyViewed } from '#/lib/recently-viewed'
+import { Button } from '#/components/ui/button'
 
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
+  const recentlyViewed = useRecentlyViewed()
+
   return (
     <main className="page-wrap px-4 pb-8 pt-14">
       <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10 sm:py-14">
@@ -82,6 +87,54 @@ function App() {
           </li>
         </ul>
       </section>
+
+      {recentlyViewed.length > 0 && (
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Recently Viewed</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => clearRecentlyViewed()}
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {recentlyViewed.map((item) => (
+              <Link
+                key={item.id}
+                to="/products/$productId"
+                params={{ productId: item.id }}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 no-underline transition hover:shadow-md"
+              >
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground/40">
+                      N/A
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    ${item.price.toFixed(2)}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   )
 }

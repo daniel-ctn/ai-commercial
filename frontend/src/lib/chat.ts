@@ -151,9 +151,12 @@ export interface ChatUIMessage {
 interface UseChatReturn {
   messages: ChatUIMessage[]
   sessionId: string | null
+  sessions: ChatSession[]
   isLoading: boolean
   statusMessage: string | null
   sendMessage: (content: string) => Promise<void>
+  loadSessions: () => Promise<void>
+  selectSession: (session: ChatSession) => void
   clearChat: () => void
 }
 
@@ -171,6 +174,7 @@ interface UseChatReturn {
 export function useChat(): UseChatReturn {
   const [messages, setMessages] = useState<ChatUIMessage[]>([])
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<ChatSession[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -179,6 +183,29 @@ export function useChat(): UseChatReturn {
     return () => {
       abortRef.current?.abort()
     }
+  }, [])
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const list = await chatApi.listSessions()
+      setSessions(list)
+    } catch {
+      // silently ignore — sessions are optional
+    }
+  }, [])
+
+  const selectSession = useCallback((session: ChatSession) => {
+    abortRef.current?.abort()
+    setSessionId(session.id)
+    setMessages(
+      session.messages.map((msg) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+      })),
+    )
+    setIsLoading(false)
+    setStatusMessage(null)
   }, [])
 
   const sendMessage = useCallback(async (content: string) => {
@@ -256,6 +283,7 @@ export function useChat(): UseChatReturn {
         },
         controller.signal,
       )
+      await loadSessions()
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
         setMessages(prev => [
@@ -272,7 +300,7 @@ export function useChat(): UseChatReturn {
       setStatusMessage(null)
       abortRef.current = null
     }
-  }, [sessionId, isLoading])
+  }, [sessionId, isLoading, loadSessions])
 
   const clearChat = useCallback(() => {
     abortRef.current?.abort()
@@ -282,5 +310,15 @@ export function useChat(): UseChatReturn {
     setStatusMessage(null)
   }, [])
 
-  return { messages, sessionId, isLoading, statusMessage, sendMessage, clearChat }
+  return {
+    messages,
+    sessionId,
+    sessions,
+    isLoading,
+    statusMessage,
+    sendMessage,
+    loadSessions,
+    selectSession,
+    clearChat,
+  }
 }

@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeftRight, Trash2, X } from 'lucide-react'
+import { ArrowLeftRight, Trash2, X, Plus, Clock } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
 import { compareQueryOptions } from '#/lib/queries'
 import { useCompareList } from '#/lib/compare'
+import { useRecentlyViewed } from '#/lib/recently-viewed'
 
 export const Route = createFileRoute('/compare')({
   component: ComparePage,
@@ -92,7 +93,6 @@ function ComparePage() {
               </tr>
             </thead>
             <tbody>
-              {/* Price row */}
               <CompareRow label="Price">
                 {data.products.map((p) => (
                   <td key={p.id} className="border-l border-border p-3">
@@ -106,7 +106,6 @@ function ComparePage() {
                 ))}
               </CompareRow>
 
-              {/* Sale badge row */}
               <CompareRow label="On Sale" highlighted>
                 {data.products.map((p) => (
                   <td key={p.id} className="border-l border-border p-3">
@@ -115,44 +114,40 @@ function ComparePage() {
                         -{Math.round((1 - p.price / p.original_price!) * 100)}% OFF
                       </Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
                   </td>
                 ))}
               </CompareRow>
 
-              {/* Shop row */}
               <CompareRow label="Shop">
                 {data.products.map((p) => (
                   <td key={p.id} className="border-l border-border p-3 text-sm">
-                    {p.shop_name ?? '—'}
+                    {p.shop_name ?? '-'}
                   </td>
                 ))}
               </CompareRow>
 
-              {/* Category row */}
               <CompareRow label="Category" highlighted>
                 {data.products.map((p) => (
                   <td key={p.id} className="border-l border-border p-3 text-sm">
                     {p.category_name ? (
                       <Badge variant="secondary">{p.category_name}</Badge>
                     ) : (
-                      '—'
+                      '-'
                     )}
                   </td>
                 ))}
               </CompareRow>
 
-              {/* Description row */}
               <CompareRow label="Description">
                 {data.products.map((p) => (
                   <td key={p.id} className="border-l border-border p-3 text-sm text-muted-foreground">
-                    <p className="line-clamp-4">{p.description || '—'}</p>
+                    <p className="line-clamp-4">{p.description || '-'}</p>
                   </td>
                 ))}
               </CompareRow>
 
-              {/* Dynamic attribute rows */}
               {data.attribute_keys.length > 0 && (
                 <tr>
                   <td
@@ -167,9 +162,11 @@ function ComparePage() {
                 <CompareRow key={key} label={key} highlighted={i % 2 === 0}>
                   {data.products.map((p) => (
                     <td key={p.id} className="border-l border-border p-3 text-sm">
-                      {p.attributes?.[key] != null
-                        ? String(p.attributes[key])
-                        : <span className="text-muted-foreground">—</span>}
+                      {p.attributes?.[key] != null ? (
+                        String(p.attributes[key])
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
                     </td>
                   ))}
                 </CompareRow>
@@ -220,9 +217,12 @@ function CompareSkeletons({ count }: { count: number }) {
 }
 
 function EmptyState({ count }: { count: number }) {
+  const recentlyViewed = useRecentlyViewed()
+  const { add, isInCompare, isFull } = useCompareList()
+
   return (
     <main className="page-wrap py-8">
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center">
         <div className="rounded-full bg-muted p-4">
           <ArrowLeftRight className="h-8 w-8 text-muted-foreground" />
         </div>
@@ -236,6 +236,68 @@ function EmptyState({ count }: { count: number }) {
           <Button>Browse Products</Button>
         </Link>
       </div>
+
+      {recentlyViewed.length > 0 && (
+        <section className="mt-10">
+          <div className="mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Recently Viewed</h2>
+            <span className="text-sm text-muted-foreground">
+              - quick add to compare
+            </span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {recentlyViewed.slice(0, 8).map((item) => {
+              const alreadyAdded = isInCompare(item.id)
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 rounded-lg border border-border p-3"
+                >
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground/40">
+                        N/A
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{item.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      ${item.price.toFixed(2)}
+                    </p>
+                  </div>
+                  <Button
+                    variant={alreadyAdded ? 'secondary' : 'outline'}
+                    size="icon-xs"
+                    disabled={alreadyAdded || isFull}
+                    onClick={() => add(item.id)}
+                    title={
+                      alreadyAdded
+                        ? 'Already added'
+                        : isFull
+                          ? 'Compare list full'
+                          : 'Add to compare'
+                    }
+                  >
+                    {alreadyAdded ? (
+                      <ArrowLeftRight className="h-3.5 w-3.5" />
+                    ) : (
+                      <Plus className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </main>
   )
 }
