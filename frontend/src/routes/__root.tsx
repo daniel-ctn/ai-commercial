@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { ChatWidget } from '../components/chat/ChatWidget'
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 
@@ -100,6 +101,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <Header />
           {children}
           <Footer />
+          <ChatWidget />
           {import.meta.env.DEV && (
             <TanStackDevtools
               config={{ position: 'bottom-right' }}

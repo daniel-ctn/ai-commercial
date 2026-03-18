@@ -121,3 +121,26 @@ export interface AdminProduct {
 export interface AdminCoupon extends Coupon {
   shop_name: string | null
 }
+
+// ── Chat ────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string
+  session_id: string
+  role: 'user' | 'assistant'
+  content: string
+  created_at: string
+}
+
+export interface ChatSession {
+  id: string
+  user_id: string
+  created_at: string
+  messages: ChatMessage[]
+}
+
+export type ChatSSEEvent =
+  | { event: 'status'; data: { message: string } }
+  | { event: 'chunk'; data: { text: string } }
+  | { event: 'done'; data: { text: string } }
+  | { event: 'error'; data: { message: string } }
