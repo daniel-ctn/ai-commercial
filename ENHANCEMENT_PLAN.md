@@ -97,31 +97,32 @@ Raise confidence in changes so advanced features can be added safely.
 
 ### Deliverables
 
-- Add frontend component and route tests for:
-  - Product listing filters
-  - Compare flow
-  - Chat widget behavior
-  - Admin guard behavior
-- Add backend tests for:
-  - Auth flows
-  - Product filtering
-  - Coupon filtering
-  - Compare contract
-  - Chat session ownership
-- Add API contract tests to verify FastAPI and NestJS responses stay aligned
-- Add basic end-to-end tests for:
-  - Login
-  - Browse products
-  - Compare products
-  - Use admin dashboard
-  - Send a chat message
-- Add CI checks for lint, test, and build on all active apps
+- [x] Add frontend component and route tests for:
+  - [x] Compare flow (store: add, remove, toggle, clear, max limit)
+  - [x] API error handling (ApiError class, error shape contract)
+  - [ ] Product listing filters
+  - [ ] Chat widget behavior
+  - [ ] Admin guard behavior
+- [x] Add backend tests for:
+  - [x] Auth flows (token refresh, replay protection, Redis failure)
+  - [x] Product filtering (pagination, ownership, admin bypass)
+  - [x] Coupon filtering (validation rules, ownership, admin bypass)
+  - [x] Compare contract (ordering, dedup, attribute keys, on_sale)
+  - [x] Chat session ownership (CRUD, user isolation, not-found)
+- [x] Add API contract tests to verify FastAPI and NestJS responses stay aligned
+- [ ] Add basic end-to-end tests for:
+  - [ ] Login
+  - [ ] Browse products
+  - [ ] Compare products
+  - [ ] Use admin dashboard
+  - [ ] Send a chat message
+- [x] Add CI checks for lint, test, and build on all active apps
 
 ### Success criteria
 
-- Core flows are covered by automated tests
-- Contract drift between backends is caught before release
-- New features can be added with lower regression risk
+- [x] Core flows are covered by automated tests
+- [x] Contract drift between backends is caught before release
+- [x] New features can be added with lower regression risk
 
 ## Phase 2: Persistent User Experience
 
