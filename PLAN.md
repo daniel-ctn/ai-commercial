@@ -33,7 +33,7 @@ Both backends connect to the same **Neon PostgreSQL** database and **Upstash Red
 - [x] Phase 3: Auth system
 - [x] Phase 4: Core CRUD APIs & pages
 - [x] Phase 5: Admin dashboard
-- [ ] Phase 6: AI Chatbot
+- [x] Phase 6: AI Chatbot
 - [x] Phase 7: Product comparison
 - [x] Phase 8: Polish & production readiness
 
@@ -44,6 +44,8 @@ Both backends connect to the same **Neon PostgreSQL** database and **Upstash Red
 - [x] Phase 3: Auth system
 - [x] Phase 4: Core CRUD APIs
 - [x] Phase 5: Admin dashboard
+- [ ] Phase 6: AI Chatbot
+- [x] Phase 7: Product comparison
 
 ## Architecture Overview
 
@@ -392,13 +394,25 @@ The AI will receive the tool results and formulate natural-language responses wi
 - `AdminModule` imports `TypeOrmModule.forFeature([User, Shop, Product, Coupon, Category])` — registers all entity repositories for cross-entity queries
 - `createQueryBuilder()` with `leftJoinAndSelect()` = complex queries with joins, like Prisma `include` + `where`
 
-### Phase 6: AI Chatbot
+### Phase 6: AI Chatbot (DONE)
 
-- Backend: Gemini integration with function-calling tools
-- Backend: SSE streaming endpoint for chat responses
-- Backend: Chat history persistence
-- Frontend: Floating chat widget with message streaming
-- Frontend: Rich message rendering (product cards, comparison tables, coupon badges)
+- Backend (FastAPI): `ai_service.py` — Google Gemini (`google-genai`) client with 5 function-calling tools: `search_products`, `get_product_details`, `find_coupons`, `get_shop_info`, `compare_products`
+- Backend (FastAPI): Function-calling loop — model calls tools, results are fed back, up to 5 rounds until the model responds with text
+- Backend (FastAPI): `api/chat.py` — Chat session CRUD (`POST /chat/sessions`, `GET /chat/sessions`, `GET /chat/sessions/{id}`, `DELETE /chat/sessions/{id}`)
+- Backend (FastAPI): `POST /chat/sessions/{id}/messages` — SSE streaming endpoint using `StreamingResponse` with event types: `status`, `chunk`, `done`, `error`
+- Backend (FastAPI): Chat history persistence — user and assistant messages saved to `chat_messages` table per session
+- Frontend: `lib/chat.ts` — `useChat` hook with SSE stream parsing via `fetch` + `ReadableStream` (not `EventSource`, because we need POST with a JSON body)
+- Frontend: `ChatWidget` — floating bottom-right bubble, opens a chat panel with header, message list, suggestion chips, and input field
+- Frontend: `ChatMessage` — message bubbles with user/assistant avatars, basic markdown formatting (bold, code, bullet lists), streaming "Thinking..." indicator
+- Frontend: Chat widget added to root layout (`__root.tsx`), available on every page
+- Frontend: Auth-gated — shows "Sign in to chat" for unauthenticated users, auto-creates a session on first message
+
+**FastAPI learning notes**:
+- `StreamingResponse` with `text/event-stream` = SSE streaming. FastAPI keeps the `get_db` dependency alive for the full stream duration, so DB reads/writes work inside the async generator
+- `google-genai` function calling: define `FunctionDeclaration` objects with `parameters_json_schema`, wrap in `types.Tool`, pass via `GenerateContentConfig`. The model returns `response.function_calls` when it wants to call tools
+- Function calling loop: append `response.candidates[0].content` (model's function call), then `types.Content(role="tool", parts=[...function_response_parts])`, then call the model again
+- `types.Part.from_function_response(name=..., response=...)` wraps tool results for Gemini
+- SSE format: `event: <type>\ndata: <json>\n\n` — parsed manually on the frontend since `EventSource` API only supports GET requests
 
 ### Phase 7: Product Comparison (DONE)
 
@@ -516,3 +530,39 @@ The AI will receive the tool results and formulate natural-language responses wi
 - `TypeOrmModule.forFeature([User, Shop, Product, ...])` = register multiple repositories in one module for cross-entity queries
 - `Promise.all()` for parallel DB queries = no NestJS-specific pattern, just standard async JS
 - `createQueryBuilder().leftJoinAndSelect()` = eager-load related data in admin list views
+
+### NestJS Phase 6: AI Chatbot
+
+**What you'll learn**: SSE streaming in NestJS, integrating external AI APIs, service-to-service communication for tool execution.
+
+- `ChatModule` with controller, service, and DTOs
+- `ChatController` — session CRUD + `@Post(':id/messages')` SSE streaming endpoint
+- `AiService` — Gemini client with function-calling tools (mirrors FastAPI's `ai_service.py`)
+- Tool handler functions: `searchProducts`, `getProductDetails`, `findCoupons`, `getShopInfo`, `compareProducts`
+- SSE streaming via `@Sse()` decorator or returning an `Observable` from `rxjs`
+- Chat history: `ChatSession` and `ChatMessage` entities (already created in Phase 2)
+- All endpoints protected with `@UseGuards(JwtAuthGuard)` + ownership checks
+
+**Key concepts**:
+- `@Sse()` decorator or returning `Observable<MessageEvent>` = NestJS's built-in SSE support (like `StreamingResponse` in FastAPI)
+- `rxjs` `Observable` = NestJS uses reactive streams for SSE; you `yield` events in FastAPI, you `observer.next()` in NestJS
+- `@google/genai` (or `google-genai` npm package) = same Gemini SDK, JavaScript version — function calling API mirrors the Python one
+- Injecting multiple services: `AiService` depends on repositories for Product, Shop, Coupon, Category to execute tool queries
+- `@Module({ imports: [TypeOrmModule.forFeature([ChatSession, ChatMessage, Product, Shop, Coupon, Category])] })` = register all entities the AI tools need
+
+### NestJS Phase 7: Product Comparison
+
+**What you'll learn**: Lightweight feature modules, `class-transformer` for query param coercion, TypeORM's `In` operator, exporting services for cross-module reuse.
+
+- `CompareModule` with controller, service, and DTO
+- `CompareController` — single `GET /compare?ids=uuid1&ids=uuid2` endpoint (no auth required, public data)
+- `CompareService` — loads products by ID array with `In()` operator, joins shop + category, collects all JSONB attribute keys into a sorted union
+- `QueryCompareDto` — validates repeated query params as a UUID array (`@IsArray`, `@ArrayMinSize(2)`, `@ArrayMaxSize(5)`, `@IsUUID('4', { each: true })`)
+- `@Transform` decorator to handle single-value-to-array coercion (when only one `ids` param is sent, Express passes a string instead of an array)
+- Module exports `CompareService` so `ChatModule` / `AiService` can reuse comparison logic
+
+**Key concepts**:
+- `In(ids)` from TypeORM = filters rows where column value is in a list (like Prisma's `where: { id: { in: ids } }`)
+- `@Transform(({ value }) => Array.isArray(value) ? value : [value])` = `class-transformer` coercion for query params — needed because HTTP query strings don't distinguish arrays from single values
+- `{ each: true }` on class-validator decorators = validate each element in an array (like Zod's `z.array(z.string().uuid())`)
+- Exporting a service via `exports: [CompareService]` = makes it injectable in other modules that import `CompareModule` (like exporting a React context provider for other trees to consume)
