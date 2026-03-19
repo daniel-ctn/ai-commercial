@@ -266,24 +266,24 @@ Make the system easier to monitor, debug, and scale.
 
 ### Deliverables
 
-- Add structured request logging across frontend and backends
-- Add Sentry or equivalent error tracking
-- Add metrics for:
-  - API latency
-  - Chat latency
-  - SSE failures
-  - Auth failures
-  - Cache hit rate
-- Add tracing or correlation IDs across requests
-- Add health dashboards for database, Redis, and AI provider status
-- Add deployment checklists and rollback guidance
-- Add environment validation and startup diagnostics for all apps
+- [x] Add structured request logging across frontend and backends
+- [x] Add Sentry or equivalent error tracking
+- [x] Add metrics for:
+  - [x] API latency
+  - [x] Chat latency
+  - [x] SSE failures
+  - [x] Auth failures
+  - [x] Cache hit rate
+- [x] Add tracing or correlation IDs across requests
+- [x] Add health dashboards for database, Redis, and AI provider status
+- [x] Add deployment checklists and rollback guidance
+- [x] Add environment validation and startup diagnostics for all apps
 
 ### Success criteria
 
-- Failures are easier to detect and diagnose
-- Production readiness is measurable
-- Operational debugging time is reduced
+- [x] Failures are easier to detect and diagnose
+- [x] Production readiness is measurable
+- [x] Operational debugging time is reduced
 
 ## 5. Recommended Execution Order
 

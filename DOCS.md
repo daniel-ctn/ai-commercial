@@ -1596,3 +1596,68 @@ Both backends implement the exact same API contract, so the frontend works with 
 | DI | `Depends()` function | Constructor injection | React Context |
 | Module system | Manual router includes | `@Module({ imports })` | File-system routes |
 | SSE streaming | `StreamingResponse` + async gen | `Observable<MessageEvent>` | Streaming response |
+
+---
+
+## 16. Deployment & Operations
+
+### Pre-deployment Checklist
+
+- [ ] All environment variables set (see [Section 6](#6-environment-variables))
+- [ ] `SECRET_KEY` is at least 16 characters, unique per environment
+- [ ] `DATABASE_URL` points to the correct PostgreSQL instance
+- [ ] `UPSTASH_REDIS_URL` and token are valid
+- [ ] `FRONTEND_URL` matches the deployed frontend origin (for CORS)
+- [ ] `GEMINI_API_KEY` is set if AI chat is needed
+- [ ] `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` set if OAuth is needed
+- [ ] Database migrations have been run (`npm run migration:run` for NestJS)
+- [ ] Database seed has been run if this is a fresh deployment
+- [ ] `robots.txt` and `sitemap.xml` are accessible
+- [ ] Health endpoints respond: `GET /health` and `GET /health/ready`
+
+### Health & Observability Endpoints
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Liveness check — confirms the app is running |
+| `GET /health/ready` | Readiness check — verifies DB, Redis, and AI provider status with latency |
+| `GET /health/features` | Feature flags — shows which optional features are enabled |
+| `GET /health/metrics` | In-memory metrics — API latency per route, counters (auth failures, cache hit/miss) |
+| `GET /health/errors` | Recent 500 errors with stack traces and request IDs |
+
+### Request Tracing
+
+Every request gets an `X-Request-ID` header. If the client sends one, it is propagated; otherwise a new ID is generated. This ID appears in:
+
+- Response headers (`X-Request-ID`)
+- Request logs (`METHOD /path STATUS NNms [request_id]`)
+- Error responses (`{ detail, request_id }`)
+- Error tracker entries
+
+### Rollback Guidance
+
+**Backend rollback:**
+
+1. Stop the current deployment
+2. Deploy the previous known-good version
+3. If a database migration was applied, check if it has a `down()` method and run `npm run migration:revert` (NestJS) — only do this if the migration is backward-compatible
+4. Verify health: `curl /health/ready`
+
+**Frontend rollback:**
+
+1. Deploy the previous build artifact (the frontend is a static bundle with SSR)
+2. Verify the site loads and the API base URL is correct
+
+**Database rollback:**
+
+- TypeORM migrations support `down()` — use `npm run migration:revert`
+- Always test migrations in staging before production
+- For destructive migrations (column drops, table drops), deploy in two phases: first deploy code that works without the column, then remove it in a later migration
+
+### Monitoring Recommendations
+
+- Poll `/health/ready` every 30s for uptime monitoring
+- Poll `/health/metrics` periodically to track latency trends
+- Set alerts on `/health/errors` count increasing
+- Monitor `cache_hit` vs `cache_miss` ratio in metrics for Redis health
+- Monitor `auth_failures` counter for brute-force attempts

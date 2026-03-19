@@ -32,8 +32,9 @@ SSE generator. The auto-commit in `get_db` runs after streaming ends.
 
 import uuid
 import logging
+import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,10 +42,12 @@ from sqlalchemy.orm import joinedload
 
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
+from app.core.error_tracker import error_tracker
+from app.core.metrics import metrics as app_metrics
 from app.models.chat import ChatMessage, ChatSession
 from app.models.user import User
 from app.schemas.chat import ChatMessageCreate, ChatMessageResponse, ChatSessionResponse
-from app.services.ai_service import generate_chat_response
+from app.services.ai_service import ChatEvent, generate_chat_response
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +121,7 @@ async def delete_session(
 async def send_message(
     session_id: uuid.UUID,
     data: ChatMessageCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -155,24 +159,55 @@ async def send_message(
         for msg in session.messages
     ]
     history.append({"role": "user", "content": data.content})
+    stream_started_at = time.perf_counter()
+    request_id = getattr(request.state, "request_id", "unknown")
 
     async def event_stream():
         full_response = ""
+        response_completed = False
 
-        async for event in generate_chat_response(history, db):
-            if event.event == "done":
-                full_response = event.data.get("text", "")
-            yield event.to_sse()
+        try:
+            async for event in generate_chat_response(history, db):
+                if event.event == "error":
+                    app_metrics.increment("sse_failures")
+                if event.event == "done":
+                    full_response = event.data.get("text", "")
+                    response_completed = True
+                yield event.to_sse()
 
-        # Persist the assistant's response after streaming completes
-        if full_response:
-            assistant_msg = ChatMessage(
-                session_id=session.id,
-                role="assistant",
-                content=full_response,
+            # Persist the assistant's response after streaming completes
+            if full_response:
+                assistant_msg = ChatMessage(
+                    session_id=session.id,
+                    role="assistant",
+                    content=full_response,
+                )
+                db.add(assistant_msg)
+                await db.flush()
+        except Exception as exc:
+            logger.exception(
+                "Chat stream failed [%s] session=%s",
+                request_id,
+                session.id,
             )
-            db.add(assistant_msg)
-            await db.flush()
+            error_tracker.capture(
+                method=request.method,
+                url=str(request.url.path),
+                status=500,
+                exc=exc,
+                request_id=request_id,
+            )
+            if not response_completed:
+                app_metrics.increment("sse_failures")
+                yield ChatEvent(
+                    "error",
+                    {"message": "Chat stream failed. Please try again."},
+                ).to_sse()
+        finally:
+            app_metrics.record_chat_latency(
+                "POST /chat/sessions/:id/messages",
+                (time.perf_counter() - stream_started_at) * 1000,
+            )
 
     return StreamingResponse(
         event_stream(),

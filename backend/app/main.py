@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 
 from app.core.config import settings
+from app.core.error_tracker import error_tracker
+from app.core.metrics import metrics as app_metrics
 from app.core.rate_limit import RateLimitMiddleware
 
 logger = logging.getLogger("app")
@@ -23,6 +25,14 @@ logging.basicConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s...", settings.app_name)
+    logger.info("Environment: debug=%s", settings.debug)
+    logger.info(
+        "Features: google_oauth=%s, ai_chat=%s",
+        bool(settings.google_client_id),
+        bool(settings.gemini_api_key),
+    )
+    logger.info("Frontend URL: %s", settings.frontend_url)
+    logger.info("Health: /health/ready | Metrics: /health/metrics")
     yield
     logger.info("Shutting down %s...", settings.app_name)
 
@@ -39,22 +49,39 @@ app = FastAPI(
 async def global_exception_handler(request: Request, exc: Exception):
     request_id = getattr(request.state, "request_id", "unknown")
     logger.exception("Unhandled error [%s] %s %s", request_id, request.method, request.url.path)
+    error_tracker.capture(
+        method=request.method,
+        url=str(request.url.path),
+        status=500,
+        exc=exc,
+        request_id=request_id,
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"detail": "Internal server error"},
+        content={"detail": "Internal server error", "request_id": request_id},
+        headers={"X-Request-ID": request_id},
     )
 
 
 @app.middleware("http")
 async def request_logging_middleware(request: Request, call_next):
-    request_id = str(uuid_mod.uuid4())[:8]
+    incoming = request.headers.get("x-request-id")
+    request_id = incoming if incoming else str(uuid_mod.uuid4())[:8]
     request.state.request_id = request_id
     start = time.perf_counter()
 
     response = await call_next(request)
 
     elapsed_ms = (time.perf_counter() - start) * 1000
-    logger.info(
+    route = f"{request.method} {request.url.path}"
+    app_metrics.record_latency(route, elapsed_ms)
+
+    if response.status_code in (401, 403):
+        app_metrics.increment("auth_failures")
+
+    log_level = logging.WARNING if response.status_code >= 400 else logging.INFO
+    logger.log(
+        log_level,
         "%s %s %s %.0fms [%s]",
         request.method,
         request.url.path,
@@ -151,33 +178,52 @@ async def sitemap(db: AsyncSession = Depends(get_db)):
     return Response(content=xml, media_type="application/xml")
 
 
+_started_at = time.time()
+
+
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "app": settings.app_name, "backend": "fastapi"}
+    return {
+        "status": "ok",
+        "app": settings.app_name,
+        "backend": "fastapi",
+        "uptime_seconds": round(time.time() - _started_at),
+    }
 
 
 @app.get("/health/ready")
 async def readiness_check():
-    """Deep health check — verifies DB and Redis connectivity."""
+    """Deep health check — verifies DB, Redis, and AI provider status."""
     from app.core.database import engine
     from app.core.redis import redis_client
     from sqlalchemy import text
 
     checks = {}
+
+    db_start = time.perf_counter()
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-        checks["database"] = "ok"
+        checks["database"] = {"status": "ok", "latency_ms": round((time.perf_counter() - db_start) * 1000)}
     except Exception as e:
-        checks["database"] = f"error: {e}"
+        checks["database"] = {"status": f"error: {e}", "latency_ms": round((time.perf_counter() - db_start) * 1000)}
 
+    redis_start = time.perf_counter()
     try:
         await redis_client.set("health_check", "1", ex=10)
-        checks["redis"] = "ok"
+        checks["redis"] = {"status": "ok", "latency_ms": round((time.perf_counter() - redis_start) * 1000)}
     except Exception as e:
-        checks["redis"] = f"error: {e}"
+        checks["redis"] = {"status": f"error: {e}", "latency_ms": round((time.perf_counter() - redis_start) * 1000)}
 
-    all_ok = all(v == "ok" for v in checks.values())
+    checks["ai_provider"] = {
+        "status": "configured" if settings.gemini_api_key else "not_configured",
+        "provider": "google_gemini",
+    }
+
+    all_ok = all(
+        v.get("status") in ("ok", "configured") if isinstance(v, dict) else v == "ok"
+        for v in checks.values()
+    )
     return JSONResponse(
         status_code=status.HTTP_200_OK if all_ok else status.HTTP_503_SERVICE_UNAVAILABLE,
         content={
@@ -191,6 +237,23 @@ async def readiness_check():
 @app.get("/health/features")
 async def get_features():
     return _get_features()
+
+
+@app.get("/health/metrics")
+async def get_metrics():
+    return app_metrics.snapshot()
+
+
+@app.get("/health/errors")
+async def get_errors(limit: int = 20):
+    normalized_limit = max(1, min(limit, 100))
+    return {
+        "total": error_tracker.count(),
+        "errors": error_tracker.get_recent(
+            normalized_limit,
+            include_sensitive=settings.debug,
+        ),
+    }
 
 
 def _get_features() -> dict:

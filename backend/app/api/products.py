@@ -69,8 +69,11 @@ PRODUCT_LIST_CACHE_VERSION_KEY = "products:list:version"
 
 
 async def _cache_get(key: str) -> str | None:
+    from app.core.metrics import metrics as app_metrics
     try:
-        return await redis_client.get(key)
+        result = await redis_client.get(key)
+        app_metrics.increment("cache_hit" if result is not None else "cache_miss")
+        return result
     except Exception:
         logger.warning("Redis read failed for key %s", key, exc_info=True)
         return None

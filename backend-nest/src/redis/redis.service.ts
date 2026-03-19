@@ -12,6 +12,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { MetricsService } from '../common/metrics/metrics.service';
 
 export class RedisOperationError extends Error {
   constructor(message: string) {
@@ -25,7 +26,10 @@ export class RedisService implements OnModuleDestroy {
   private readonly client: Redis;
   private readonly logger = new Logger(RedisService.name);
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly metrics: MetricsService,
+  ) {
     const url = this.config.getOrThrow<string>('UPSTASH_REDIS_URL');
     const isProduction = this.config.get('NODE_ENV') === 'production';
     this.client = new Redis(url, {
@@ -40,7 +44,9 @@ export class RedisService implements OnModuleDestroy {
 
   async get(key: string): Promise<string | null> {
     try {
-      return await this.client.get(key);
+      const result = await this.client.get(key);
+      this.metrics.increment(result !== null ? 'cache_hit' : 'cache_miss');
+      return result;
     } catch (err) {
       this.logger.warn(`Redis read failed for key ${key}: ${err}`);
       return null;

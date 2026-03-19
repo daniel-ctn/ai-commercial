@@ -9,10 +9,12 @@
  *   - controllers: HTTP route handlers registered in this module
  *   - providers: services/utilities available for dependency injection
  */
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { RequestLoggerMiddleware } from './common/middleware/request-logger.middleware';
+import { MetricsModule } from './common/metrics/metrics.module';
 import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
@@ -43,6 +45,7 @@ import { validate } from './config/env.validation';
       throttlers: [{ ttl: 60000, limit: 60 }],
     }),
 
+    MetricsModule,
     DatabaseModule,
     RedisModule,
     AuthModule,
@@ -64,4 +67,8 @@ import { validate } from './config/env.validation';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestLoggerMiddleware).forRoutes('*');
+  }
+}

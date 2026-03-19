@@ -19,6 +19,7 @@ import { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import { ErrorTrackerService } from './common/metrics/error-tracker.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
@@ -33,7 +34,7 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
   app.use(helmet());
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter(app.get(ErrorTrackerService)));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
 
   // Global prefix — every route starts with /api/v1
@@ -43,6 +44,8 @@ async function bootstrap() {
       { path: 'health', method: RequestMethod.GET },
       { path: 'health/ready', method: RequestMethod.GET },
       { path: 'health/features', method: RequestMethod.GET },
+      { path: 'health/metrics', method: RequestMethod.GET },
+      { path: 'health/errors', method: RequestMethod.GET },
       { path: 'sitemap.xml', method: RequestMethod.GET },
     ],
   });
@@ -100,8 +103,19 @@ async function bootstrap() {
   await app.listen(port);
 
   const logger = new Logger('Bootstrap');
+  const env = config.get('NODE_ENV', 'development');
+  const features = {
+    google_oauth: !!config.get('GOOGLE_CLIENT_ID'),
+    ai_chat: !!config.get('GEMINI_API_KEY'),
+    cors_origins: frontendOrigins.join(', '),
+  };
+
   logger.log(`Server running on http://localhost:${port}`);
   logger.log(`API prefix: http://localhost:${port}/api/v1`);
+  logger.log(`Environment: ${env}`);
+  logger.log(`Features: ${JSON.stringify(features)}`);
+  logger.log(`Health: http://localhost:${port}/health/ready`);
+  logger.log(`Metrics: http://localhost:${port}/health/metrics`);
 }
 
 bootstrap().catch((err) => {
