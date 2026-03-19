@@ -115,3 +115,15 @@ async def get_current_admin(
             detail="Admin access required",
         )
     return current_user
+
+
+async def get_current_shop_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Require shop_admin or admin role."""
+    if current_user.role not in ("shop_admin", "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Shop admin access required",
+        )
+    return current_user

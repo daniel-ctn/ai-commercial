@@ -35,7 +35,9 @@ import type {
   Coupon,
   PaginatedResponse,
   Product,
+  QualityReport,
   Shop,
+  ShopStats,
 } from '#/lib/types'
 
 // ── Products ────────────────────────────────────────────────────
@@ -289,6 +291,32 @@ export function useToggleCouponActive() {
   })
 }
 
+export function useToggleShopAdminProductActive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (productId: string) =>
+      api.patch<AdminProduct>(`/shop-admin/products/${productId}/toggle-active`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'products'] })
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'stats'] })
+      toast.success('Product status updated')
+    },
+  })
+}
+
+export function useToggleShopAdminCouponActive() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (couponId: string) =>
+      api.patch<AdminCoupon>(`/shop-admin/coupons/${couponId}/toggle-active`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'coupons'] })
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'stats'] })
+      toast.success('Coupon status updated')
+    },
+  })
+}
+
 // ── Admin CRUD via existing endpoints ────────────────────────────
 
 export function useCreateProduct() {
@@ -352,6 +380,108 @@ export function useDeleteCoupon() {
       qc.invalidateQueries({ queryKey: ['admin', 'coupons'] })
       qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
       toast.success('Coupon deleted')
+    },
+  })
+}
+
+// ── Bulk Actions ─────────────────────────────────────────────────
+
+export function useBulkToggleProducts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, activate }: { ids: string[]; activate: boolean }) =>
+      api.post<{ affected: number }>('/admin/products/bulk-toggle', { ids, activate }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'products'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success(`${data.affected} product(s) updated`)
+    },
+  })
+}
+
+export function useBulkToggleCoupons() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, activate }: { ids: string[]; activate: boolean }) =>
+      api.post<{ affected: number }>('/admin/coupons/bulk-toggle', { ids, activate }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'coupons'] })
+      qc.invalidateQueries({ queryKey: ['admin', 'stats'] })
+      toast.success(`${data.affected} coupon(s) updated`)
+    },
+  })
+}
+
+export function useBulkAssignCategory() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, category_id }: { ids: string[]; category_id: string }) =>
+      api.post<{ affected: number }>('/admin/products/bulk-category', { ids, category_id }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'products'] })
+      toast.success(`${data.affected} product(s) reassigned`)
+    },
+  })
+}
+
+// ── AI Catalog ───────────────────────────────────────────────────
+
+export function useAiDescription() {
+  return useMutation({
+    mutationFn: (productId: string) =>
+      api.post<{ description: string }>(`/admin/products/${productId}/ai-description`),
+  })
+}
+
+export function useAiAttributes() {
+  return useMutation({
+    mutationFn: (productId: string) =>
+      api.post<{ attributes: Record<string, string> }>(`/admin/products/${productId}/ai-attributes`),
+  })
+}
+
+export const qualityReportQueryOptions = (productId: string) =>
+  queryOptions({
+    queryKey: ['admin', 'quality', productId],
+    queryFn: () => api.get<QualityReport>(`/admin/products/${productId}/quality`),
+    enabled: !!productId,
+  })
+
+// ── Shop Admin ───────────────────────────────────────────────────
+
+export const shopAdminStatsQueryOptions = () =>
+  queryOptions({
+    queryKey: ['shop-admin', 'stats'],
+    queryFn: () => api.get<ShopStats>('/shop-admin/stats'),
+  })
+
+export const shopAdminProductsQueryOptions = (filters: AdminFilters = {}) => {
+  const qs = buildAdminParams(filters)
+  return queryOptions({
+    queryKey: ['shop-admin', 'products', filters],
+    queryFn: () =>
+      api.get<PaginatedResponse<AdminProduct>>(`/shop-admin/products${qs ? `?${qs}` : ''}`),
+  })
+}
+
+export const shopAdminCouponsQueryOptions = (filters: AdminFilters = {}) => {
+  const qs = buildAdminParams(filters)
+  return queryOptions({
+    queryKey: ['shop-admin', 'coupons', filters],
+    queryFn: () =>
+      api.get<PaginatedResponse<AdminCoupon>>(`/shop-admin/coupons${qs ? `?${qs}` : ''}`),
+  })
+}
+
+export function useBulkToggleShopAdminProducts() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ ids, activate }: { ids: string[]; activate: boolean }) =>
+      api.post<{ affected: number }>('/shop-admin/products/bulk-toggle', { ids, activate }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'products'] })
+      qc.invalidateQueries({ queryKey: ['shop-admin', 'stats'] })
+      toast.success(`${data.affected} product(s) updated`)
     },
   })
 }

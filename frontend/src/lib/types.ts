@@ -78,6 +78,17 @@ export interface Coupon {
 
 // ── Admin ───────────────────────────────────────────────────────
 
+export interface DataQualityStats {
+  missing_images: number
+  missing_descriptions: number
+  missing_attributes: number
+}
+
+export interface CategoryCount {
+  category: string | null
+  count: number
+}
+
 export interface AdminStats {
   total_users: number
   total_shops: number
@@ -87,6 +98,28 @@ export interface AdminStats {
   total_coupons: number
   active_coupons: number
   total_categories: number
+  data_quality?: DataQualityStats
+  products_by_category?: CategoryCount[]
+}
+
+export interface ShopStats {
+  shop_id: string
+  shop_name: string
+  total_products: number
+  active_products: number
+  total_coupons: number
+  active_coupons: number
+  data_quality?: {
+    missing_images: number
+    missing_descriptions: number
+    quality_score: number
+  }
+}
+
+export interface QualityReport {
+  score: number
+  issues: string[]
+  suggestions: string[]
 }
 
 export interface AdminUser {

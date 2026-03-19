@@ -21,6 +21,17 @@ from pydantic import BaseModel, ConfigDict
 VALID_ROLES = ("user", "shop_admin", "admin")
 
 
+class DataQualityStats(BaseModel):
+    missing_images: int
+    missing_descriptions: int
+    missing_attributes: int = 0
+
+
+class CategoryCount(BaseModel):
+    category: str | None
+    count: int
+
+
 class AdminStatsResponse(BaseModel):
     """Dashboard overview stats — all the numbers at a glance."""
     total_users: int
@@ -31,6 +42,33 @@ class AdminStatsResponse(BaseModel):
     total_coupons: int
     active_coupons: int
     total_categories: int
+    data_quality: DataQualityStats | None = None
+    products_by_category: list[CategoryCount] | None = None
+
+
+class ShopStatsResponse(BaseModel):
+    shop_id: uuid.UUID
+    shop_name: str
+    total_products: int
+    active_products: int
+    total_coupons: int
+    active_coupons: int
+    data_quality: dict | None = None
+
+
+class BulkActionResponse(BaseModel):
+    affected: int
+
+
+class QualityReportResponse(BaseModel):
+    score: int
+    issues: list[str]
+    suggestions: list[str]
+
+
+class AiTextResponse(BaseModel):
+    description: str | None = None
+    attributes: dict | None = None
 
 
 class AdminUserResponse(BaseModel):

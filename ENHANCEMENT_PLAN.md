@@ -214,26 +214,26 @@ Upgrade the admin experience from CRUD management to actionable insight.
 
 ### Deliverables
 
-- Add shop-admin dashboard with scoped access
-- Add analytics for:
-  - Product count by shop/category
-  - Coupon activity
-  - Active vs inactive inventory
-  - Products missing images, descriptions, or attributes
-- Add quality scoring for product listings
-- Add bulk actions:
-  - Activate/deactivate products
-  - Activate/deactivate coupons
-  - Bulk category assignment
-  - Bulk metadata cleanup
-- Add smarter creation flows with validation helpers
-- Add AI-assisted product description and attribute cleanup for admins
+- [x] Add shop-admin dashboard with scoped access
+- [x] Add analytics for:
+  - [x] Product count by shop/category
+  - [x] Coupon activity
+  - [x] Active vs inactive inventory
+  - [x] Products missing images, descriptions, or attributes
+- [x] Add quality scoring for product listings
+- [x] Add bulk actions:
+  - [x] Activate/deactivate products
+  - [x] Activate/deactivate coupons
+  - [x] Bulk category assignment
+  - [ ] Bulk metadata cleanup
+- [x] Add smarter creation flows with validation helpers
+- [x] Add AI-assisted product description and attribute cleanup for admins
 
 ### Success criteria
 
-- Admin area helps improve catalog quality, not just manage rows
-- Shop owners can maintain inventory more efficiently
-- Data quality improves over time
+- [x] Admin area helps improve catalog quality, not just manage rows
+- [x] Shop owners can maintain inventory more efficiently
+- [x] Data quality improves over time
 
 ## Phase 6: SEO, Content, and Public Product Maturity
 

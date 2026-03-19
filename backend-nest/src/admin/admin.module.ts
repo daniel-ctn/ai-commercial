@@ -14,7 +14,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminController } from './admin.controller';
+import { ShopAdminController } from './shop-admin.controller';
 import { AdminService } from './admin.service';
+import { AiCatalogService } from './ai-catalog.service';
 import { User } from '../users/entities/user.entity';
 import { Shop } from '../shops/entities/shop.entity';
 import { Product } from '../products/entities/product.entity';
@@ -23,7 +25,8 @@ import { Category } from '../categories/entities/category.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User, Shop, Product, Coupon, Category])],
-  controllers: [AdminController],
-  providers: [AdminService],
+  controllers: [AdminController, ShopAdminController],
+  providers: [AdminService, AiCatalogService],
+  exports: [AdminService],
 })
 export class AdminModule {}

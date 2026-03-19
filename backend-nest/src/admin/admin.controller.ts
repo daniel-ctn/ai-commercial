@@ -17,14 +17,18 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Param,
   Body,
   Query,
   UseGuards,
   ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
+import { AiCatalogService } from './ai-catalog.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
 import {
@@ -38,11 +42,37 @@ import {
 @Controller('admin')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly aiCatalog: AiCatalogService,
+  ) {}
 
   @Get('stats')
   getStats() {
     return this.adminService.getStats();
+  }
+
+  @Get('shops/:id/stats')
+  getShopStats(@Param('id', ParseUUIDPipe) id: string) {
+    return this.adminService.getShopStats(id);
+  }
+
+  @Post('products/bulk-toggle')
+  @HttpCode(HttpStatus.OK)
+  bulkToggleProducts(@Body() body: { ids: string[]; activate: boolean }) {
+    return this.adminService.bulkToggleProducts(body.ids, body.activate);
+  }
+
+  @Post('coupons/bulk-toggle')
+  @HttpCode(HttpStatus.OK)
+  bulkToggleCoupons(@Body() body: { ids: string[]; activate: boolean }) {
+    return this.adminService.bulkToggleCoupons(body.ids, body.activate);
+  }
+
+  @Post('products/bulk-category')
+  @HttpCode(HttpStatus.OK)
+  bulkAssignCategory(@Body() body: { ids: string[]; category_id: string }) {
+    return this.adminService.bulkAssignCategory(body.ids, body.category_id);
   }
 
   // ── Users ───────────────────────────────────────────────────
@@ -94,5 +124,24 @@ export class AdminController {
   @Patch('coupons/:id/toggle-active')
   toggleCouponActive(@Param('id', ParseUUIDPipe) id: string) {
     return this.adminService.toggleCouponActive(id);
+  }
+
+  // ── AI Catalog ────────────────────────────────────────────
+
+  @Post('products/:id/ai-description')
+  @HttpCode(HttpStatus.OK)
+  generateDescription(@Param('id', ParseUUIDPipe) id: string) {
+    return this.aiCatalog.generateDescription(id);
+  }
+
+  @Post('products/:id/ai-attributes')
+  @HttpCode(HttpStatus.OK)
+  generateAttributes(@Param('id', ParseUUIDPipe) id: string) {
+    return this.aiCatalog.generateAttributes(id);
+  }
+
+  @Get('products/:id/quality')
+  getQualityReport(@Param('id', ParseUUIDPipe) id: string) {
+    return this.aiCatalog.getQualityReport(id);
   }
 }

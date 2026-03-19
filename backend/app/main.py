@@ -95,6 +95,7 @@ from app.api.admin import router as admin_router
 from app.api.chat import router as chat_router
 from app.api.compare import router as compare_router
 from app.api.favorites import router as favorites_router
+from app.api.shop_admin import router as shop_admin_router
 
 app.include_router(auth_router, prefix=settings.api_prefix)
 app.include_router(categories_router, prefix=settings.api_prefix)
@@ -103,6 +104,7 @@ app.include_router(products_router, prefix=settings.api_prefix)
 app.include_router(coupons_router, prefix=settings.api_prefix)
 app.include_router(compare_router, prefix=settings.api_prefix)
 app.include_router(favorites_router, prefix=settings.api_prefix)
+app.include_router(shop_admin_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(chat_router, prefix=settings.api_prefix)
 

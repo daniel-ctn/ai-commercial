@@ -16,7 +16,7 @@
  * like having a separate Prisma client scoped to one table.
  * It provides .find(), .count(), .save(), .createQueryBuilder(), etc.
  */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -52,6 +52,9 @@ export class AdminService {
       totalCoupons,
       activeCoupons,
       totalCategories,
+      missingImages,
+      missingDescriptions,
+      missingAttributes,
     ] = await Promise.all([
       this.usersRepo.count(),
       this.shopsRepo.count(),
@@ -61,7 +64,25 @@ export class AdminService {
       this.couponsRepo.count(),
       this.couponsRepo.count({ where: { is_active: true } }),
       this.categoriesRepo.count(),
+      this.productsRepo.createQueryBuilder('p')
+        .where('p.image_url IS NULL OR p.image_url = :empty', { empty: '' })
+        .getCount(),
+      this.productsRepo.createQueryBuilder('p')
+        .where('p.description IS NULL OR p.description = :empty', { empty: '' })
+        .getCount(),
+      this.productsRepo.createQueryBuilder('p')
+        .where("p.attributes IS NULL OR p.attributes = :empty", { empty: '{}' })
+        .getCount(),
     ]);
+
+    const productsByCategory = await this.productsRepo
+      .createQueryBuilder('p')
+      .select('c.name', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .leftJoin('p.category', 'c')
+      .groupBy('c.name')
+      .orderBy('count', 'DESC')
+      .getRawMany();
 
     return {
       total_users: totalUsers,
@@ -72,7 +93,147 @@ export class AdminService {
       total_coupons: totalCoupons,
       active_coupons: activeCoupons,
       total_categories: totalCategories,
+      data_quality: {
+        missing_images: missingImages,
+        missing_descriptions: missingDescriptions,
+        missing_attributes: missingAttributes,
+      },
+      products_by_category: productsByCategory,
     };
+  }
+
+  async getShopStats(shopId: string) {
+    const shop = await this.shopsRepo.findOne({ where: { id: shopId } });
+    if (!shop) throw new NotFoundException('Shop not found');
+
+    const [totalProducts, activeProducts, totalCoupons, activeCoupons, missingImages, missingDescriptions] =
+      await Promise.all([
+        this.productsRepo.count({ where: { shop_id: shopId } }),
+        this.productsRepo.count({ where: { shop_id: shopId, is_active: true } }),
+        this.couponsRepo.count({ where: { shop_id: shopId } }),
+        this.couponsRepo.count({ where: { shop_id: shopId, is_active: true } }),
+        this.productsRepo.createQueryBuilder('p')
+          .where('p.shop_id = :shopId', { shopId })
+          .andWhere('(p.image_url IS NULL OR p.image_url = :empty)', { empty: '' })
+          .getCount(),
+        this.productsRepo.createQueryBuilder('p')
+          .where('p.shop_id = :shopId', { shopId })
+          .andWhere('(p.description IS NULL OR p.description = :empty)', { empty: '' })
+          .getCount(),
+      ]);
+
+    const qualityScore = this.calculateQualityScore(totalProducts, missingImages, missingDescriptions);
+
+    return {
+      shop_id: shopId,
+      shop_name: shop.name,
+      total_products: totalProducts,
+      active_products: activeProducts,
+      total_coupons: totalCoupons,
+      active_coupons: activeCoupons,
+      data_quality: {
+        missing_images: missingImages,
+        missing_descriptions: missingDescriptions,
+        quality_score: qualityScore,
+      },
+    };
+  }
+
+  private calculateQualityScore(
+    total: number,
+    missingImages: number,
+    missingDescriptions: number,
+  ): number {
+    if (total === 0) return 100;
+    const imageScore = ((total - missingImages) / total) * 50;
+    const descScore = ((total - missingDescriptions) / total) * 50;
+    return Math.round(imageScore + descScore);
+  }
+
+  async bulkToggleProducts(productIds: string[], activate: boolean): Promise<{ affected: number }> {
+    if (productIds.length === 0) {
+      return { affected: 0 };
+    }
+
+    const result = await this.productsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ is_active: activate })
+      .whereInIds(productIds)
+      .execute();
+    return { affected: result.affected ?? 0 };
+  }
+
+  async bulkToggleCoupons(couponIds: string[], activate: boolean): Promise<{ affected: number }> {
+    if (couponIds.length === 0) {
+      return { affected: 0 };
+    }
+
+    const result = await this.couponsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ is_active: activate })
+      .whereInIds(couponIds)
+      .execute();
+    return { affected: result.affected ?? 0 };
+  }
+
+  async bulkAssignCategory(productIds: string[], categoryId: string): Promise<{ affected: number }> {
+    if (productIds.length === 0) {
+      return { affected: 0 };
+    }
+
+    await this.ensureCategoryExists(categoryId);
+
+    const result = await this.productsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ category_id: categoryId })
+      .whereInIds(productIds)
+      .execute();
+    return { affected: result.affected ?? 0 };
+  }
+
+  async bulkToggleProductsForShop(
+    productIds: string[],
+    activate: boolean,
+    shopId: string,
+  ): Promise<{ affected: number }> {
+    if (productIds.length === 0) {
+      return { affected: 0 };
+    }
+
+    const result = await this.productsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ is_active: activate })
+      .whereInIds(productIds)
+      .andWhere('shop_id = :shopId', { shopId })
+      .execute();
+
+    return { affected: result.affected ?? 0 };
+  }
+
+  async bulkAssignCategoryForShop(
+    productIds: string[],
+    categoryId: string,
+    shopId: string,
+  ): Promise<{ affected: number }> {
+    if (productIds.length === 0) {
+      return { affected: 0 };
+    }
+
+    await this.ensureCategoryExists(categoryId);
+
+    const result = await this.productsRepo
+      .createQueryBuilder()
+      .update()
+      .set({ category_id: categoryId })
+      .whereInIds(productIds)
+      .andWhere('shop_id = :shopId', { shopId })
+      .execute();
+
+    return { affected: result.affected ?? 0 };
   }
 
   // ── Users ─────────────────────────────────────────────────────
@@ -181,11 +342,17 @@ export class AdminService {
   }
 
   async toggleProductActive(productId: string): Promise<Product> {
-    const product = await this.productsRepo.findOne({
-      where: { id: productId },
-      relations: ['shop', 'category'],
-    });
-    if (!product) throw new NotFoundException('Product not found');
+    const product = await this.findProductOrThrow(productId);
+
+    product.is_active = !product.is_active;
+    return this.productsRepo.save(product);
+  }
+
+  async toggleProductActiveForShop(productId: string, shopId: string): Promise<Product> {
+    const product = await this.findProductOrThrow(productId);
+    if (product.shop_id !== shopId) {
+      throw new ForbiddenException('Product does not belong to your shop');
+    }
 
     product.is_active = !product.is_active;
     return this.productsRepo.save(product);
@@ -229,13 +396,48 @@ export class AdminService {
   }
 
   async toggleCouponActive(couponId: string): Promise<Coupon> {
+    const coupon = await this.findCouponOrThrow(couponId);
+
+    coupon.is_active = !coupon.is_active;
+    return this.couponsRepo.save(coupon);
+  }
+
+  async toggleCouponActiveForShop(couponId: string, shopId: string): Promise<Coupon> {
+    const coupon = await this.findCouponOrThrow(couponId);
+    if (coupon.shop_id !== shopId) {
+      throw new ForbiddenException('Coupon does not belong to your shop');
+    }
+
+    coupon.is_active = !coupon.is_active;
+    return this.couponsRepo.save(coupon);
+  }
+
+  private async ensureCategoryExists(categoryId: string): Promise<void> {
+    const category = await this.categoriesRepo.findOne({ where: { id: categoryId } });
+    if (!category) {
+      throw new NotFoundException('Category not found');
+    }
+  }
+
+  private async findProductOrThrow(productId: string): Promise<Product> {
+    const product = await this.productsRepo.findOne({
+      where: { id: productId },
+      relations: ['shop', 'category'],
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    return product;
+  }
+
+  private async findCouponOrThrow(couponId: string): Promise<Coupon> {
     const coupon = await this.couponsRepo.findOne({
       where: { id: couponId },
       relations: ['shop'],
     });
-    if (!coupon) throw new NotFoundException('Coupon not found');
-
-    coupon.is_active = !coupon.is_active;
-    return this.couponsRepo.save(coupon);
+    if (!coupon) {
+      throw new NotFoundException('Coupon not found');
+    }
+    return coupon;
   }
 }

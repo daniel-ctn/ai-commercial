@@ -89,6 +89,15 @@ export default function Header() {
           >
             Compare
           </Link>
+          {(user?.role === 'shop_admin' || user?.role === 'admin') && (
+            <Link
+              to="/shop-admin"
+              className="nav-link"
+              activeProps={{ className: 'nav-link is-active' }}
+            >
+              My Shop
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link
               to="/admin"
