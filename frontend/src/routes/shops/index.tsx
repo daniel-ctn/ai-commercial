@@ -10,6 +10,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '#/componen
 import { Input } from '#/components/ui/input'
 import { Skeleton } from '#/components/ui/skeleton'
 import { shopsQueryOptions } from '#/lib/queries'
+import { buildSeoHead } from '#/lib/seo'
 
 interface ShopSearch {
   page?: number
@@ -21,6 +22,13 @@ export const Route = createFileRoute('/shops/')({
     page: Number(search.page) || undefined,
     search: (search.search as string) || undefined,
   }),
+  head: () =>
+    buildSeoHead({
+      title: 'Shops - AI Commercial',
+      description:
+        'Explore verified shops on AI Commercial. Find trusted sellers with great products and active deals.',
+      path: '/shops',
+    }),
   component: ShopsPage,
 })
 

@@ -243,20 +243,20 @@ Make the public experience look and behave like a real product.
 
 ### Deliverables
 
-- Replace remaining starter branding and template content
-- Add route-level SEO metadata for products, shops, deals, compare, and about pages
-- Add Open Graph and Twitter card metadata
-- Add JSON-LD structured data for products, organizations, and offers
-- Add sitemap generation
-- Improve 404 and error page UX
-- Improve content hierarchy, headlines, and conversion copy
-- Add canonical URLs and clean metadata defaults
+- [x] Replace remaining starter branding and template content
+- [x] Add route-level SEO metadata for products, shops, deals, compare, and about pages
+- [x] Add Open Graph and Twitter card metadata
+- [x] Add JSON-LD structured data for products, organizations, and offers
+- [x] Add sitemap generation
+- [x] Improve 404 and error page UX
+- [x] Improve content hierarchy, headlines, and conversion copy
+- [x] Add canonical URLs and clean metadata defaults
 
 ### Success criteria
 
-- Public pages feel branded and intentional
-- The app is ready for indexing and social sharing
-- Product pages communicate value clearly
+- [x] Public pages feel branded and intentional
+- [x] The app is ready for indexing and social sharing
+- [x] Product pages communicate value clearly
 
 ## Phase 7: Observability and Production Operations
 

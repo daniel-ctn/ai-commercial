@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopAdminRouteImport } from './routes/shop-admin'
 import { Route as DealsRouteImport } from './routes/deals'
 import { Route as CompareRouteImport } from './routes/compare'
@@ -31,6 +32,11 @@ import { Route as AdminProductsRouteImport } from './routes/admin/products'
 import { Route as AdminCouponsRouteImport } from './routes/admin/coupons'
 import { Route as AuthGoogleCallbackRouteImport } from './routes/auth/google/callback'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopAdminRoute = ShopAdminRouteImport.update({
   id: '/shop-admin',
   path: '/shop-admin',
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
   '/shop-admin': typeof ShopAdminRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/shops': typeof AdminShopsRoute
@@ -165,6 +172,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/shops': typeof AdminShopsRoute
@@ -189,6 +197,7 @@ export interface FileRoutesById {
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
   '/shop-admin': typeof ShopAdminRouteWithChildren
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/coupons': typeof AdminCouponsRoute
   '/admin/products': typeof AdminProductsRoute
   '/admin/shops': typeof AdminShopsRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/deals'
     | '/shop-admin'
+    | '/sitemap.xml'
     | '/admin/coupons'
     | '/admin/products'
     | '/admin/shops'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/compare'
     | '/deals'
+    | '/sitemap.xml'
     | '/admin/coupons'
     | '/admin/products'
     | '/admin/shops'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/deals'
     | '/shop-admin'
+    | '/sitemap.xml'
     | '/admin/coupons'
     | '/admin/products'
     | '/admin/shops'
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   CompareRoute: typeof CompareRoute
   DealsRoute: typeof DealsRoute
   ShopAdminRoute: typeof ShopAdminRouteWithChildren
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
@@ -293,6 +306,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop-admin': {
       id: '/shop-admin'
       path: '/shop-admin'
@@ -484,6 +504,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareRoute: CompareRoute,
   DealsRoute: DealsRoute,
   ShopAdminRoute: ShopAdminRouteWithChildren,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,

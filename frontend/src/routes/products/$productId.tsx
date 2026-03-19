@@ -1,23 +1,3 @@
-/**
- * Product detail page — /products/:productId
- *
- * == Dynamic Route Params (TanStack vs Next.js) ==
- *
- * Next.js:   app/products/[productId]/page.tsx  → params.productId
- * TanStack:  routes/products/$productId.tsx     → Route.useParams().productId
- *
- * The `$` prefix in the filename is TanStack Router's way of marking
- * a dynamic segment (like `[param]` in Next.js).
- *
- * == Route Loaders ==
- *
- * We use `loader` to start fetching data BEFORE the component renders.
- * This is like Next.js `generateMetadata` + Server Component data fetch —
- * the data is ready by the time the component mounts, avoiding loading spinners.
- *
- * `ensureQueryData` checks the cache first and only fetches if stale.
- */
-
 import { useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
@@ -27,10 +7,25 @@ import { Separator } from '#/components/ui/separator'
 import { Skeleton } from '#/components/ui/skeleton'
 import { productQueryOptions } from '#/lib/queries'
 import { trackProductView } from '#/lib/recently-viewed'
+import { absoluteUrl, buildSeoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/products/$productId')({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(productQueryOptions(params.productId)),
+  head: ({ loaderData }) => {
+    const product = loaderData
+    if (!product) return {}
+
+    return buildSeoHead({
+      title: `${product.name} - $${product.price} | AI Commercial`,
+      description:
+        product.description?.slice(0, 160) ??
+        `Shop ${product.name} for $${product.price} on AI Commercial.`,
+      path: `/products/${product.id}`,
+      image: product.image_url ?? '/logo.png',
+      type: 'product',
+    })
+  },
   component: ProductDetailPage,
 })
 
@@ -39,14 +34,16 @@ function ProductDetailPage() {
   const { data: product, isLoading } = useQuery(productQueryOptions(productId))
 
   useEffect(() => {
-    if (product) {
-      trackProductView({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image_url: product.image_url,
-      })
+    if (!product) {
+      return
     }
+
+    trackProductView({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image_url: product.image_url,
+    })
   }, [product])
 
   if (isLoading || !product) {
@@ -65,14 +62,39 @@ function ProductDetailPage() {
     )
   }
 
-  const isOnSale = product.original_price && product.original_price > product.price
+  const isOnSale =
+    product.original_price != null && product.original_price > product.price
   const discount = isOnSale
     ? Math.round((1 - product.price / product.original_price!) * 100)
     : 0
 
+  const productUrl = absoluteUrl(`/products/${product.id}`)
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    url: productUrl,
+    description: product.description ?? undefined,
+    image: product.image_url ? absoluteUrl(product.image_url) : undefined,
+    offers: {
+      '@type': 'Offer',
+      url: productUrl,
+      price: product.price,
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+    },
+    ...(product.shop_name
+      ? { brand: { '@type': 'Brand', name: product.shop_name } }
+      : {}),
+  }
+
   return (
     <main className="page-wrap py-8">
-      {/* Breadcrumbs */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">
         <Link to="/products" className="hover:text-foreground">
           Products
@@ -80,13 +102,7 @@ function ProductDetailPage() {
         <span>/</span>
         {product.category_name && (
           <>
-            <Link
-              to="/products"
-              search={{ category: product.category_id }}
-              className="hover:text-foreground"
-            >
-              {product.category_name}
-            </Link>
+            <span>{product.category_name}</span>
             <span>/</span>
           </>
         )}
@@ -94,7 +110,6 @@ function ProductDetailPage() {
       </nav>
 
       <div className="grid gap-8 md:grid-cols-2">
-        {/* ── Image ──────────────────────────────────────────── */}
         <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
           {product.image_url ? (
             <img
@@ -104,7 +119,21 @@ function ProductDetailPage() {
             />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground/30">
-              <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="96"
+                height="96"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+              </svg>
             </div>
           )}
           {isOnSale && (
@@ -114,7 +143,6 @@ function ProductDetailPage() {
           )}
         </div>
 
-        {/* ── Details ────────────────────────────────────────── */}
         <div>
           <p className="mb-2 text-sm text-muted-foreground">
             {product.shop_name && (
@@ -128,9 +156,10 @@ function ProductDetailPage() {
             )}
           </p>
 
-          <h1 className="display-title mb-4 text-3xl font-bold">{product.name}</h1>
+          <h1 className="display-title mb-4 text-3xl font-bold">
+            {product.name}
+          </h1>
 
-          {/* Price */}
           <div className="mb-6 flex items-baseline gap-3">
             <span className="text-3xl font-bold">${product.price.toFixed(2)}</span>
             {isOnSale && (
@@ -148,7 +177,6 @@ function ProductDetailPage() {
 
           <Separator className="my-6" />
 
-          {/* Description */}
           {product.description && (
             <div className="mb-6">
               <h2 className="mb-2 font-semibold">Description</h2>
@@ -158,7 +186,6 @@ function ProductDetailPage() {
             </div>
           )}
 
-          {/* Attributes */}
           {product.attributes && Object.keys(product.attributes).length > 0 && (
             <Card>
               <CardContent className="p-4">

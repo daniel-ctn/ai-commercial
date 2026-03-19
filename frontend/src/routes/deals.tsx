@@ -13,8 +13,16 @@ import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
 import { couponsQueryOptions, productsQueryOptions } from '#/lib/queries'
 import { useFavoriteIds } from '#/lib/favorites'
+import { buildSeoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/deals')({
+  head: () =>
+    buildSeoHead({
+      title: 'Deals & Coupons - AI Commercial',
+      description:
+        'Find the best deals, active coupons, and on-sale products across all shops on AI Commercial.',
+      path: '/deals',
+    }),
   component: DealsPage,
 })
 

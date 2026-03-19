@@ -1,17 +1,3 @@
-/**
- * Shop detail page — /shops/:shopId
- *
- * Shows shop info plus its products and active coupons.
- *
- * == Parallel Queries ==
- *
- * We fetch the shop, its products, AND its coupons at the same time.
- * TanStack Query runs them in parallel automatically — you just call
- * useQuery() multiple times. No Promise.all() needed.
- *
- * In Next.js Server Components, you'd do the same with parallel fetches.
- */
-
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Badge } from '#/components/ui/badge'
@@ -19,12 +5,30 @@ import { Card, CardContent } from '#/components/ui/card'
 import { Separator } from '#/components/ui/separator'
 import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
-import { shopQueryOptions, productsQueryOptions, couponsQueryOptions } from '#/lib/queries'
+import {
+  shopQueryOptions,
+  productsQueryOptions,
+  couponsQueryOptions,
+} from '#/lib/queries'
 import { useFavoriteIds } from '#/lib/favorites'
+import { absoluteUrl, buildSeoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/shops/$shopId')({
   loader: ({ context, params }) =>
     context.queryClient.ensureQueryData(shopQueryOptions(params.shopId)),
+  head: ({ loaderData }) => {
+    const shop = loaderData
+    if (!shop) return {}
+
+    return buildSeoHead({
+      title: `${shop.name} - AI Commercial`,
+      description:
+        shop.description?.slice(0, 160) ??
+        `Shop products from ${shop.name} on AI Commercial.`,
+      path: `/shops/${shop.id}`,
+      image: shop.logo_url ?? '/logo.png',
+    })
+  },
   component: ShopDetailPage,
 })
 
@@ -52,9 +56,24 @@ function ShopDetailPage() {
     )
   }
 
+  const shopUrl = absoluteUrl(`/shops/${shop.id}`)
+  const shopJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    name: shop.name,
+    url: shopUrl,
+    description: shop.description ?? undefined,
+    image: shop.logo_url ? absoluteUrl(shop.logo_url) : undefined,
+    sameAs: shop.website ?? undefined,
+  }
+
   return (
     <main className="page-wrap py-8">
-      {/* ── Shop Header ──────────────────────────────────────── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(shopJsonLd) }}
+      />
+
       <div className="mb-8 flex items-start gap-4">
         {shop.logo_url ? (
           <img
@@ -85,7 +104,6 @@ function ShopDetailPage() {
         </div>
       </div>
 
-      {/* ── Active Coupons ───────────────────────────────────── */}
       {coupons && coupons.items.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-4 text-xl font-semibold">Active Deals</h2>
@@ -122,18 +140,13 @@ function ShopDetailPage() {
 
       <Separator className="my-8" />
 
-      {/* ── Products ─────────────────────────────────────────── */}
       <section>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold">
             Products {products && `(${products.total})`}
           </h2>
           {products && products.total > 12 && (
-            <Link
-              to="/products"
-              search={{ shop_id: shopId }}
-              className="text-sm"
-            >
+            <Link to="/products" search={{ shop_id: shopId }} className="text-sm">
               View all
             </Link>
           )}

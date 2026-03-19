@@ -3,9 +3,12 @@ import time
 import uuid as uuid_mod
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import get_db
 
 from app.core.config import settings
 from app.core.rate_limit import RateLimitMiddleware
@@ -107,6 +110,45 @@ app.include_router(favorites_router, prefix=settings.api_prefix)
 app.include_router(shop_admin_router, prefix=settings.api_prefix)
 app.include_router(admin_router, prefix=settings.api_prefix)
 app.include_router(chat_router, prefix=settings.api_prefix)
+
+
+@app.get("/sitemap.xml", response_class=Response)
+async def sitemap(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import select as sel
+    from app.models.product import Product as Prod
+    from app.models.shop import Shop as Shp
+
+    products = (await db.execute(
+        sel(Prod.id, Prod.created_at).where(Prod.is_active == True)
+        .order_by(Prod.created_at.desc()).limit(5000)
+    )).all()
+    shops = (await db.execute(
+        sel(Shp.id, Shp.created_at).where(Shp.is_active == True)
+        .order_by(Shp.created_at.desc())
+    )).all()
+
+    base = settings.frontend_url
+    static_pages = [
+        (f"{base}/", "1.0", "daily"),
+        (f"{base}/products", "0.9", "daily"),
+        (f"{base}/shops", "0.8", "weekly"),
+        (f"{base}/deals", "0.8", "daily"),
+        (f"{base}/compare", "0.6", "weekly"),
+        (f"{base}/about", "0.4", "monthly"),
+    ]
+
+    urls = []
+    for loc, pri, freq in static_pages:
+        urls.append(f"  <url><loc>{loc}</loc><changefreq>{freq}</changefreq><priority>{pri}</priority></url>")
+    for p in products:
+        lm = p.created_at.strftime("%Y-%m-%d")
+        urls.append(f"  <url><loc>{base}/products/{p.id}</loc><lastmod>{lm}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>")
+    for s in shops:
+        lm = s.created_at.strftime("%Y-%m-%d")
+        urls.append(f"  <url><loc>{base}/shops/{s.id}</loc><lastmod>{lm}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>")
+
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(urls) + "\n</urlset>"
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.get("/health")

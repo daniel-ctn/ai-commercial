@@ -29,6 +29,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import ProductCard from '#/components/product/ProductCard'
 import { productsQueryOptions, categoriesQueryOptions } from '#/lib/queries'
 import { useFavoriteIds } from '#/lib/favorites'
+import { buildSeoHead } from '#/lib/seo'
 
 interface ProductSearch {
   page?: number
@@ -52,6 +53,13 @@ export const Route = createFileRoute('/products/')({
     on_sale: search.on_sale === 'true' || search.on_sale === true || undefined,
     sort: (search.sort as string) || undefined,
   }),
+  head: () =>
+    buildSeoHead({
+      title: 'Products - AI Commercial',
+      description:
+        'Browse and filter products across all shops. Find the best deals, compare prices, and discover new products.',
+      path: '/products',
+    }),
   component: ProductsPage,
 })
 

@@ -21,8 +21,18 @@ import {
 import { useRecentlyViewed, clearRecentlyViewed } from '#/lib/recently-viewed'
 import { useFavoriteIds } from '#/lib/favorites'
 import { useAuth } from '#/lib/auth'
+import { absoluteUrl, buildSeoHead } from '#/lib/seo'
 
-export const Route = createFileRoute('/')({ component: HomePage })
+export const Route = createFileRoute('/')({
+  head: () =>
+    buildSeoHead({
+      title: 'AI Commercial - Smart Shopping, Better Deals',
+      description:
+        'Discover trending products, compare prices across shops, and find the best deals with AI-powered shopping recommendations.',
+      path: '/',
+    }),
+  component: HomePage,
+})
 
 function HomePage() {
   const { user } = useAuth()
@@ -39,8 +49,20 @@ function HomePage() {
   const { data: coupons } = useQuery(couponsQueryOptions({ page_size: 4 }))
   const { data: shops } = useQuery(shopsQueryOptions({ page_size: 6 }))
 
+  const orgJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'AI Commercial',
+    description: 'Intelligent shopping platform with AI-powered product discovery and comparison.',
+    url: absoluteUrl('/'),
+  }
+
   return (
     <main className="page-wrap px-4 pb-12 pt-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
       {/* ── Hero ──────────────────────────────────────────────── */}
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 px-6 py-12 sm:px-10 sm:py-16">
         <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />

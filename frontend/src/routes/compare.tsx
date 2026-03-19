@@ -7,8 +7,16 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { compareQueryOptions, compareSummaryQueryOptions } from '#/lib/queries'
 import { useCompareList } from '#/lib/compare'
 import { useRecentlyViewed } from '#/lib/recently-viewed'
+import { buildSeoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/compare')({
+  head: () =>
+    buildSeoHead({
+      title: 'Compare Products - AI Commercial',
+      description:
+        'Compare products side-by-side with AI-powered summaries. See prices, specs, and get personalized recommendations.',
+      path: '/compare',
+    }),
   component: ComparePage,
 })
 

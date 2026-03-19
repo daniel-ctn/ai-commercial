@@ -43,6 +43,7 @@ async function bootstrap() {
       { path: 'health', method: RequestMethod.GET },
       { path: 'health/ready', method: RequestMethod.GET },
       { path: 'health/features', method: RequestMethod.GET },
+      { path: 'sitemap.xml', method: RequestMethod.GET },
     ],
   });
 
