@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsUUID, IsNumber, IsBoolean, Min } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsNumber, IsBoolean, IsIn, Min } from 'class-validator';
 import { PaginationQuery } from '../../common/dto/pagination.dto';
 
 export class QueryProductsDto extends PaginationQuery {
@@ -28,4 +28,8 @@ export class QueryProductsDto extends PaginationQuery {
   @IsOptional()
   @IsBoolean()
   on_sale?: boolean;
+
+  @IsOptional()
+  @IsIn(['newest', 'price_asc', 'price_desc', 'discount', 'best_value'])
+  sort?: string;
 }

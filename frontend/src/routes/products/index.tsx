@@ -38,6 +38,7 @@ interface ProductSearch {
   min_price?: number
   max_price?: number
   on_sale?: boolean
+  sort?: string
 }
 
 export const Route = createFileRoute('/products/')({
@@ -49,6 +50,7 @@ export const Route = createFileRoute('/products/')({
     min_price: search.min_price ? Number(search.min_price) : undefined,
     max_price: search.max_price ? Number(search.max_price) : undefined,
     on_sale: search.on_sale === 'true' || search.on_sale === true || undefined,
+    sort: (search.sort as string) || undefined,
   }),
   component: ProductsPage,
 })
@@ -76,6 +78,7 @@ function ProductsPage() {
       min_price: filters.min_price,
       max_price: filters.max_price,
       on_sale: filters.on_sale,
+      sort: filters.sort,
     }),
   )
 
@@ -173,8 +176,21 @@ function ProductsPage() {
             On Sale
           </Button>
 
-          {/* Clear all */}
-          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale) && (
+          <select
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:w-auto"
+            value={filters.sort ?? ''}
+            onChange={(e) =>
+              updateFilters({ sort: e.target.value || undefined })
+            }
+          >
+            <option value="">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="discount">Biggest Discount</option>
+            <option value="best_value">Best Value</option>
+          </select>
+
+          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale || filters.sort) && (
             <Button
               variant="ghost"
               size="sm"
@@ -257,7 +273,7 @@ function ProductsPage() {
               ? `No results for "${filters.search}". Try a different search term or remove some filters.`
               : 'Try broadening your filters — remove a category or price range to see more results.'}
           </p>
-          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale) && (
+          {(filters.search || filters.category || filters.min_price || filters.max_price || filters.on_sale || filters.sort) && (
             <Button
               variant="outline"
               size="sm"

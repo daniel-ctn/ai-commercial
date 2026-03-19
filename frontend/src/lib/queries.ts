@@ -49,6 +49,7 @@ interface ProductFilters {
   min_price?: number
   max_price?: number
   on_sale?: boolean
+  sort?: string
 }
 
 export const productsQueryOptions = (filters: ProductFilters = {}) => {
@@ -61,6 +62,7 @@ export const productsQueryOptions = (filters: ProductFilters = {}) => {
   if (filters.min_price !== undefined) params.set('min_price', String(filters.min_price))
   if (filters.max_price !== undefined) params.set('max_price', String(filters.max_price))
   if (filters.on_sale) params.set('on_sale', 'true')
+  if (filters.sort) params.set('sort', filters.sort)
 
   const queryString = params.toString()
 

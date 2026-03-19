@@ -40,12 +40,20 @@ function createProductsService(options?: {
   shopOwnerId?: string;
 }) {
   const storedProducts = options?.products ?? [makeProduct()];
+  const orderCalls: Array<{ clause: string; direction?: string }> = [];
 
   const qb = {
     leftJoinAndSelect: () => qb,
     where: () => qb,
     andWhere: () => qb,
-    orderBy: () => qb,
+    orderBy: (clause: string, direction?: string) => {
+      orderCalls.push({ clause, direction });
+      return qb;
+    },
+    addOrderBy: (clause: string, direction?: string) => {
+      orderCalls.push({ clause, direction });
+      return qb;
+    },
     skip: () => qb,
     take: () => qb,
     getManyAndCount: async () =>
@@ -75,11 +83,14 @@ function createProductsService(options?: {
     incr: async () => 1,
   };
 
-  return new ProductsService(
-    productsRepo as never,
-    shopsRepo as never,
-    redis as never,
-  );
+  return {
+    service: new ProductsService(
+      productsRepo as never,
+      shopsRepo as never,
+      redis as never,
+    ),
+    orderCalls,
+  };
 }
 
 test('findAll returns paginated products', async () => {
@@ -87,7 +98,7 @@ test('findAll returns paginated products', async () => {
     makeProduct({ id: 'p-1', name: 'Laptop' }),
     makeProduct({ id: 'p-2', name: 'Phone' }),
   ];
-  const service = createProductsService({ products });
+  const { service } = createProductsService({ products });
 
   const result = await service.findAll({ page: 1, page_size: 20 } as never);
 
@@ -98,14 +109,14 @@ test('findAll returns paginated products', async () => {
 
 test('findById returns a product when found', async () => {
   const product = makeProduct({ id: 'p-1', name: 'Laptop' });
-  const service = createProductsService({ products: [product] });
+  const { service } = createProductsService({ products: [product] });
 
   const result = await service.findById('p-1');
   assert.equal(result.name, 'Laptop');
 });
 
 test('findById throws NotFoundException when product does not exist', async () => {
-  const service = createProductsService({ products: [] });
+  const { service } = createProductsService({ products: [] });
 
   await assert.rejects(
     service.findById('nonexistent'),
@@ -119,7 +130,7 @@ test('findById throws NotFoundException when product does not exist', async () =
 
 test('remove throws ForbiddenException when user does not own the shop', async () => {
   const product = makeProduct({ id: 'p-1', shop_id: 'shop-1' });
-  const service = createProductsService({
+  const { service } = createProductsService({
     products: [product],
     shopOwnerId: 'other-user',
   });
@@ -137,7 +148,7 @@ test('remove throws ForbiddenException when user does not own the shop', async (
 
 test('remove allows admin to delete any product', async () => {
   const product = makeProduct({ id: 'p-1', shop_id: 'shop-1' });
-  const service = createProductsService({
+  const { service } = createProductsService({
     products: [product],
     shopOwnerId: 'other-user',
   });
@@ -147,7 +158,7 @@ test('remove allows admin to delete any product', async () => {
 });
 
 test('remove throws NotFoundException when product does not exist', async () => {
-  const service = createProductsService({
+  const { service } = createProductsService({
     products: [],
     shopOwnerId: 'user-1',
   });
@@ -160,4 +171,26 @@ test('remove throws NotFoundException when product does not exist', async () => 
       return true;
     },
   );
+});
+
+test('findAll adds deterministic tie-breakers for ranked sorts', async () => {
+  const { service, orderCalls } = createProductsService({
+    products: [makeProduct({ id: 'p-1' }), makeProduct({ id: 'p-2' })],
+  });
+
+  await service.findAll({
+    page: 1,
+    page_size: 20,
+    sort: 'discount',
+  } as never);
+
+  assert.deepEqual(orderCalls.slice(0, 3), [
+    {
+      clause:
+        'CASE WHEN product.original_price IS NOT NULL AND product.original_price > product.price THEN product.original_price - product.price ELSE 0 END',
+      direction: 'DESC',
+    },
+    { clause: 'product.created_at', direction: 'DESC' },
+    { clause: 'product.id', direction: 'DESC' },
+  ]);
 });

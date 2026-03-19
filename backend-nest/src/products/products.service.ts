@@ -46,7 +46,7 @@ export class ProductsService {
     query: QueryProductsDto,
   ): Promise<PaginatedResponse<Product>> {
     const listVersion = await this.getListCacheVersion(PRODUCT_LIST_CACHE_VERSION_KEY);
-    const cacheKey = `products:list:v${listVersion}:${query.page}:${query.page_size}:${query.search || ''}:${query.category || ''}:${query.shop_id || ''}:${query.min_price || ''}:${query.max_price || ''}:${query.on_sale || ''}`;
+    const cacheKey = `products:list:v${listVersion}:${query.page}:${query.page_size}:${query.search || ''}:${query.category || ''}:${query.shop_id || ''}:${query.min_price || ''}:${query.max_price || ''}:${query.on_sale || ''}:${query.sort || ''}`;
     const cachedData = await this.redisService.get(cacheKey);
     if (cachedData) {
       const parsed = JSON.parse(cachedData);
@@ -100,7 +100,37 @@ export class ProductsService {
       qb.andWhere('product.original_price > product.price');
     }
 
-    qb.orderBy('product.created_at', 'DESC');
+    switch (query.sort) {
+      case 'price_asc':
+        qb.orderBy('product.price', 'ASC');
+        qb.addOrderBy('product.created_at', 'DESC');
+        qb.addOrderBy('product.id', 'DESC');
+        break;
+      case 'price_desc':
+        qb.orderBy('product.price', 'DESC');
+        qb.addOrderBy('product.created_at', 'DESC');
+        qb.addOrderBy('product.id', 'DESC');
+        break;
+      case 'discount':
+        qb.orderBy(
+          'CASE WHEN product.original_price IS NOT NULL AND product.original_price > product.price THEN product.original_price - product.price ELSE 0 END',
+          'DESC',
+        );
+        qb.addOrderBy('product.created_at', 'DESC');
+        qb.addOrderBy('product.id', 'DESC');
+        break;
+      case 'best_value':
+        qb.orderBy(
+          'CASE WHEN product.original_price IS NOT NULL AND product.original_price > product.price THEN (product.original_price - product.price) / product.original_price ELSE 0 END',
+          'DESC',
+        );
+        qb.addOrderBy('product.created_at', 'DESC');
+        qb.addOrderBy('product.id', 'DESC');
+        break;
+      default:
+        qb.orderBy('product.created_at', 'DESC');
+        qb.addOrderBy('product.id', 'DESC');
+    }
     qb.skip((query.page - 1) * query.page_size);
     qb.take(query.page_size);
 

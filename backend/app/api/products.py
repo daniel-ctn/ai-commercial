@@ -116,18 +116,19 @@ async def list_products(
     min_price: float | None = None,
     max_price: float | None = None,
     on_sale: bool = False,
+    sort: str | None = Query(None, pattern="^(newest|price_asc|price_desc|discount|best_value)$"),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List products with filtering, search, and pagination.
+    List products with filtering, search, sorting, and pagination.
 
     Filters stack — you can combine them:
-      GET /products?category=laptops&min_price=500&max_price=1500&on_sale=true
+      GET /products?category=laptops&min_price=500&max_price=1500&on_sale=true&sort=price_asc
     """
     list_version = await _cache_get_version(PRODUCT_LIST_CACHE_VERSION_KEY)
     cache_key = (
         f"products:list:v{list_version}:{page}:{page_size}:{search}:{category}:"
-        f"{shop_id}:{min_price}:{max_price}:{on_sale}"
+        f"{shop_id}:{min_price}:{max_price}:{on_sale}:{sort}"
     )
     cached_data = await _cache_get(cache_key)
     if cached_data:
@@ -183,9 +184,36 @@ async def list_products(
     # ── Execute ──────────────────────────────────────────────────
     total = (await db.execute(count_query)).scalar() or 0
 
+    from sqlalchemy import case, desc
+
+    if sort == "price_asc":
+        query = query.order_by(Product.price.asc(), Product.created_at.desc(), Product.id.desc())
+    elif sort == "price_desc":
+        query = query.order_by(Product.price.desc(), Product.created_at.desc(), Product.id.desc())
+    elif sort == "discount":
+        discount_expr = case(
+            (
+                (Product.original_price.isnot(None)) & (Product.original_price > Product.price),
+                Product.original_price - Product.price,
+            ),
+            else_=0,
+        )
+        query = query.order_by(desc(discount_expr), Product.created_at.desc(), Product.id.desc())
+    elif sort == "best_value":
+        value_expr = case(
+            (
+                (Product.original_price.isnot(None)) & (Product.original_price > Product.price),
+                (Product.original_price - Product.price) / Product.original_price,
+            ),
+            else_=0,
+        )
+        query = query.order_by(desc(value_expr), Product.created_at.desc(), Product.id.desc())
+    else:
+        query = query.order_by(Product.created_at.desc(), Product.id.desc())
+
     offset = (page - 1) * page_size
     result = await db.execute(
-        query.order_by(Product.created_at.desc()).offset(offset).limit(page_size)
+        query.offset(offset).limit(page_size)
     )
     products = list(result.scalars().unique().all())
 

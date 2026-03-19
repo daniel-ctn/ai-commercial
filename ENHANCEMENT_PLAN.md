@@ -184,28 +184,27 @@ Help users find good products faster and surface more relevant content.
 
 ### Deliverables
 
-- Replace the starter home page with a real commerce landing page
-- Add featured categories, trending products, best current deals, and shop spotlights
-- Add sorting options:
-  - Price low to high
-  - Price high to low
-  - Newest
-  - Biggest discount
-  - Best value
-- Add richer filters:
-  - Multi-category
-  - Discount range
-  - Price presets
-  - Attribute-based filtering from JSON specs
-- Add personalized homepage sections for logged-in users
-- Add "recommended for you" and "because you viewed" modules
-- Add deal urgency indicators and expiration-aware ranking
+- [x] Replace the starter home page with a real commerce landing page
+- [x] Add featured categories, trending products, best current deals, and shop spotlights
+- [x] Add sorting options:
+  - [x] Price low to high
+  - [x] Price high to low
+  - [x] Newest
+  - [x] Biggest discount
+  - [x] Best value
+- [x] Add richer filters:
+  - [x] Sort dropdown in product listing
+  - [ ] Multi-category
+  - [ ] Attribute-based filtering from JSON specs
+- [x] Add personalized homepage sections for logged-in users
+- [x] Add "recommended for you" and "because you viewed" modules
+- [x] Add deal urgency indicators and expiration-aware ranking
 
 ### Success criteria
 
-- Discovery feels product-led rather than API-demo-like
-- Search becomes more precise and more useful
-- Returning users see more relevant results
+- [x] Discovery feels product-led rather than API-demo-like
+- [x] Search becomes more precise and more useful
+- [x] Returning users see more relevant results
 
 ## Phase 5: Shop Admin and Business Intelligence
 

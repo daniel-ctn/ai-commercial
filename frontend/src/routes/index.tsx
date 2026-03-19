@@ -1,95 +1,332 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Clock } from 'lucide-react'
-import { useRecentlyViewed, clearRecentlyViewed } from '#/lib/recently-viewed'
+import { useQuery } from '@tanstack/react-query'
+import {
+  Clock,
+  ArrowRight,
+  Sparkles,
+  Tag,
+  TrendingUp,
+  Store,
+} from 'lucide-react'
+import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
+import { Skeleton } from '#/components/ui/skeleton'
+import ProductCard from '#/components/product/ProductCard'
+import {
+  productsQueryOptions,
+  categoriesQueryOptions,
+  couponsQueryOptions,
+  shopsQueryOptions,
+} from '#/lib/queries'
+import { useRecentlyViewed, clearRecentlyViewed } from '#/lib/recently-viewed'
+import { useFavoriteIds } from '#/lib/favorites'
+import { useAuth } from '#/lib/auth'
 
-export const Route = createFileRoute('/')({ component: App })
+export const Route = createFileRoute('/')({ component: HomePage })
 
-function App() {
+function HomePage() {
+  const { user } = useAuth()
   const recentlyViewed = useRecentlyViewed()
+  const { isFavorite, toggle: toggleFavorite } = useFavoriteIds()
+
+  const { data: categories } = useQuery(categoriesQueryOptions())
+  const { data: trendingProducts, isLoading: trendingLoading } = useQuery(
+    productsQueryOptions({ page_size: 8 }),
+  )
+  const { data: saleProducts, isLoading: saleLoading } = useQuery(
+    productsQueryOptions({ on_sale: true, page_size: 4, sort: 'discount' }),
+  )
+  const { data: coupons } = useQuery(couponsQueryOptions({ page_size: 4 }))
+  const { data: shops } = useQuery(shopsQueryOptions({ page_size: 6 }))
 
   return (
-    <main className="page-wrap px-4 pb-8 pt-14">
-      <section className="island-shell rise-in relative overflow-hidden rounded-[2rem] px-6 py-10 sm:px-10 sm:py-14">
-        <div className="pointer-events-none absolute -left-20 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(79,184,178,0.32),transparent_66%)]" />
-        <div className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(47,106,74,0.18),transparent_66%)]" />
-        <p className="island-kicker mb-3">TanStack Start Base Template</p>
-        <h1 className="display-title mb-5 max-w-3xl text-4xl leading-[1.02] font-bold tracking-tight text-[var(--sea-ink)] sm:text-6xl">
-          Start simple, ship quickly.
-        </h1>
-        <p className="mb-8 max-w-2xl text-base text-[var(--sea-ink-soft)] sm:text-lg">
-          This base starter intentionally keeps things light: two routes, clean
-          structure, and the essentials you need to build from scratch.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <a
-            href="/about"
-            className="rounded-full border border-[rgba(50,143,151,0.3)] bg-[rgba(79,184,178,0.14)] px-5 py-2.5 text-sm font-semibold text-[var(--lagoon-deep)] no-underline transition hover:-translate-y-0.5 hover:bg-[rgba(79,184,178,0.24)]"
-          >
-            About This Starter
-          </a>
-          <a
-            href="https://tanstack.com/router"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-[rgba(23,58,64,0.2)] bg-white/50 px-5 py-2.5 text-sm font-semibold text-[var(--sea-ink)] no-underline transition hover:-translate-y-0.5 hover:border-[rgba(23,58,64,0.35)]"
-          >
-            Router Guide
-          </a>
+    <main className="page-wrap px-4 pb-12 pt-10">
+      {/* ── Hero ──────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-primary/5 px-6 py-12 sm:px-10 sm:py-16">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-primary/5 blur-2xl" />
+        <div className="relative">
+          <Badge variant="secondary" className="mb-4">
+            <Sparkles className="mr-1 h-3 w-3" />
+            AI-Powered Shopping
+          </Badge>
+          <h1 className="mb-4 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
+            Find the best deals,{' '}
+            <span className="text-primary">compare smarter</span>
+          </h1>
+          <p className="mb-8 max-w-xl text-lg text-muted-foreground">
+            Browse products across multiple shops, compare prices side by side, and get
+            AI-powered recommendations — all in one place.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/products">
+              <Button size="lg">
+                Browse Products
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link to="/deals">
+              <Button variant="outline" size="lg">
+                <Tag className="mr-2 h-4 w-4" />
+                Today's Deals
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          [
-            'Type-Safe Routing',
-            'Routes and links stay in sync across every page.',
-          ],
-          [
-            'Server Functions',
-            'Call server code from your UI without creating API boilerplate.',
-          ],
-          [
-            'Streaming by Default',
-            'Ship progressively rendered responses for faster experiences.',
-          ],
-          [
-            'Tailwind Native',
-            'Design quickly with utility-first styling and reusable tokens.',
-          ],
-        ].map(([title, desc], index) => (
-          <article
-            key={title}
-            className="island-shell feature-card rise-in rounded-2xl p-5"
-            style={{ animationDelay: `${index * 90 + 80}ms` }}
-          >
-            <h2 className="mb-2 text-base font-semibold text-[var(--sea-ink)]">
-              {title}
-            </h2>
-            <p className="m-0 text-sm text-[var(--sea-ink-soft)]">{desc}</p>
-          </article>
-        ))}
+      {/* ── Categories ────────────────────────────────────────── */}
+      {categories && categories.length > 0 && (
+        <section className="mt-12">
+          <SectionHeader title="Shop by Category" />
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {categories.flatMap((cat) =>
+              cat.children && cat.children.length > 0
+                ? cat.children.map((child) => (
+                    <Link
+                      key={child.id}
+                      to="/products"
+                      search={{ category: child.slug }}
+                      className="group flex items-center gap-3 rounded-xl border border-border p-4 no-underline transition hover:border-primary/30 hover:shadow-sm"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Tag className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium group-hover:text-primary">
+                          {child.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{cat.name}</p>
+                      </div>
+                    </Link>
+                  ))
+                : [
+                    <Link
+                      key={cat.id}
+                      to="/products"
+                      search={{ category: cat.slug }}
+                      className="group flex items-center gap-3 rounded-xl border border-border p-4 no-underline transition hover:border-primary/30 hover:shadow-sm"
+                    >
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Tag className="h-5 w-5" />
+                      </div>
+                      <p className="text-sm font-medium group-hover:text-primary">
+                        {cat.name}
+                      </p>
+                    </Link>,
+                  ],
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ── Trending Products ─────────────────────────────────── */}
+      <section className="mt-12">
+        <SectionHeader
+          title="Trending Products"
+          icon={<TrendingUp className="h-5 w-5" />}
+          linkTo="/products"
+          linkLabel="View all"
+        />
+        {trendingLoading ? (
+          <ProductSkeletonGrid count={4} />
+        ) : trendingProducts && trendingProducts.items.length > 0 ? (
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {trendingProducts.items.slice(0, 8).map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                isFavorite={isFavorite(product.id)}
+                onToggleFavorite={toggleFavorite}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptySection message="No products available yet" />
+        )}
       </section>
 
-      <section className="island-shell mt-8 rounded-2xl p-6">
-        <p className="island-kicker mb-2">Quick Start</p>
-        <ul className="m-0 list-disc space-y-2 pl-5 text-sm text-[var(--sea-ink-soft)]">
-          <li>
-            Edit <code>src/routes/index.tsx</code> to customize the home page.
-          </li>
-          <li>
-            Update <code>src/components/Header.tsx</code> and{' '}
-            <code>src/components/Footer.tsx</code> for brand links.
-          </li>
-          <li>
-            Add routes in <code>src/routes</code> and tweak visual tokens in{' '}
-            <code>src/styles.css</code>.
-          </li>
-        </ul>
+      {/* ── Best Deals ────────────────────────────────────────── */}
+      <section className="mt-12">
+        <SectionHeader
+          title="Best Deals"
+          icon={<Tag className="h-5 w-5" />}
+          linkTo="/deals"
+          linkLabel="All deals"
+        />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            {saleLoading ? (
+              <ProductSkeletonGrid count={4} columns="sm:grid-cols-2" />
+            ) : saleProducts && saleProducts.items.length > 0 ? (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {saleProducts.items.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    isFavorite={isFavorite(product.id)}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                ))}
+              </div>
+            ) : (
+              <EmptySection message="No sale items right now" />
+            )}
+          </div>
+
+          {/* Active Coupons sidebar */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Active Coupons
+            </h3>
+            {coupons && coupons.items.length > 0 ? (
+              coupons.items.map((coupon) => {
+                const daysLeft = Math.ceil(
+                  (new Date(coupon.valid_until).getTime() - Date.now()) /
+                    (1000 * 60 * 60 * 24),
+                )
+                return (
+                  <div
+                    key={coupon.id}
+                    className="rounded-lg border border-border p-3"
+                  >
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className="border-dashed font-mono text-sm"
+                      >
+                        {coupon.code}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {coupon.discount_type === 'percentage'
+                          ? `${coupon.discount_value}%`
+                          : `$${coupon.discount_value}`}{' '}
+                        OFF
+                      </Badge>
+                    </div>
+                    {coupon.description && (
+                      <p className="text-xs text-muted-foreground">
+                        {coupon.description}
+                      </p>
+                    )}
+                    <p
+                      className={`mt-1 text-xs ${daysLeft <= 3 ? 'font-medium text-destructive' : 'text-muted-foreground'}`}
+                    >
+                      {daysLeft <= 0
+                        ? 'Expires today!'
+                        : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+                    </p>
+                  </div>
+                )
+              })
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No active coupons right now
+              </p>
+            )}
+            <Link to="/deals" className="block text-sm text-primary">
+              See all deals &rarr;
+            </Link>
+          </div>
+        </div>
       </section>
 
-      {recentlyViewed.length > 0 && (
-        <section className="mt-8">
+      {/* ── Shop Spotlights ───────────────────────────────────── */}
+      {shops && shops.items.length > 0 && (
+        <section className="mt-12">
+          <SectionHeader
+            title="Shop Spotlights"
+            icon={<Store className="h-5 w-5" />}
+            linkTo="/shops"
+            linkLabel="All shops"
+          />
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+            {shops.items.slice(0, 6).map((shop) => (
+              <Link
+                key={shop.id}
+                to="/shops/$shopId"
+                params={{ shopId: shop.id }}
+                className="group flex items-center gap-4 rounded-xl border border-border p-4 no-underline transition hover:shadow-md"
+              >
+                {shop.logo_url ? (
+                  <img
+                    src={shop.logo_url}
+                    alt={shop.name}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+                    {shop.name.charAt(0)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium group-hover:text-primary">
+                    {shop.name}
+                  </p>
+                  {shop.description && (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {shop.description}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Because You Viewed (personalized) ─────────────────── */}
+      {user && recentlyViewed.length > 0 && (
+        <section className="mt-12">
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Because You Viewed</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => clearRecentlyViewed()}
+            >
+              Clear
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {recentlyViewed.slice(0, 8).map((item) => (
+              <Link
+                key={item.id}
+                to="/products/$productId"
+                params={{ productId: item.id }}
+                className="flex items-center gap-3 rounded-lg border border-border p-3 no-underline transition hover:shadow-md"
+              >
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground/40">
+                      N/A
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    ${item.price.toFixed(2)}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Recently Viewed (unauthenticated) ─────────────────── */}
+      {!user && recentlyViewed.length > 0 && (
+        <section className="mt-12">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-muted-foreground" />
@@ -104,7 +341,7 @@ function App() {
             </Button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {recentlyViewed.map((item) => (
+            {recentlyViewed.slice(0, 4).map((item) => (
               <Link
                 key={item.id}
                 to="/products/$productId"
@@ -136,5 +373,59 @@ function App() {
         </section>
       )}
     </main>
+  )
+}
+
+function SectionHeader({
+  title,
+  icon,
+  linkTo,
+  linkLabel,
+}: {
+  title: string
+  icon?: React.ReactNode
+  linkTo?: string
+  linkLabel?: string
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h2 className="text-lg font-semibold">{title}</h2>
+      </div>
+      {linkTo && linkLabel && (
+        <Link to={linkTo} className="text-sm text-primary">
+          {linkLabel} &rarr;
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function ProductSkeletonGrid({
+  count,
+  columns = 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4',
+}: {
+  count: number
+  columns?: string
+}) {
+  return (
+    <div className={`grid gap-6 ${columns}`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="space-y-3">
+          <Skeleton className="aspect-square w-full rounded-lg" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function EmptySection({ message }: { message: string }) {
+  return (
+    <div className="flex items-center justify-center rounded-lg border border-dashed border-border py-12">
+      <p className="text-sm text-muted-foreground">{message}</p>
+    </div>
   )
 }
