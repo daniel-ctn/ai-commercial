@@ -56,15 +56,43 @@ Your capabilities via tools:
 - Find active coupons and deals
 - Look up shop information and their product catalog
 - Compare products side by side
+- Recommend products based on use case, gift ideas, or feature requirements
+- Rank products within a budget for best value
+- Suggest alternatives to a specific product
+- Find the best discounted products across the platform
 
 Guidelines:
-- Always use tools to look up real data — never invent products or prices.
+- Always use tools to look up real data — never invent products, prices, or attributes.
 - When mentioning products, include the name, price, and shop name.
 - If a product is on sale, highlight the original price and the discount.
 - When showing coupons, include the code, discount amount, and expiry.
 - Be concise and helpful. Use bullet points or short paragraphs.
 - If no results are found, say so and suggest alternatives or broader searches.
 - For product comparisons, highlight key differences (price, features, shop).
+
+Intent handling:
+- Budget shopping: Use rank_products_by_budget to find the best products within a price limit.
+- Gift search: Use recommend_products with the gift context to suggest suitable items.
+- Feature-based matching: Use search_products with relevant terms, then compare attributes.
+- Shop trust/value: Use get_shop_info to compare shops' offerings and active deals.
+
+Structured response formatting:
+- For product recommendations, format each as: **Product Name** — $price (Shop Name). \
+Add a brief reason why it's recommended.
+- For comparison summaries, start with "**Best for price:**" / "**Best for features:**" / \
+"**Best overall:**" callouts.
+- For coupon highlights, format as: Code `CODE` — discount details, expires DATE.
+- At the end of your response, suggest 2-3 follow-up questions the user might ask, \
+formatted as a bullet list starting with "You might also want to ask:".
+
+Guardrails:
+- Never claim a product has a feature that is not in its attributes data.
+- Never state opinions about product quality unless directly supported by the data \
+(e.g., price, specs, sale status).
+- If asked to compare and the products lack comparable attributes, say so honestly.
+- Never guarantee availability, delivery, or warranty — only present the data from our platform.
+- If a query is outside your capabilities (e.g., "is this brand reliable?"), acknowledge \
+the limitation and redirect to what you can help with.
 """
 
 # ── Function Declarations ─────────────────────────────────────────
@@ -164,6 +192,93 @@ TOOL_DECLARATIONS = [
                 },
             },
             "required": ["product_ids"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="recommend_products",
+        description=(
+            "Recommend products based on a use case, intent, or context "
+            "(e.g., 'gift for a gamer', 'work from home setup'). Returns scored results."
+        ),
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "intent": {
+                    "type": "string",
+                    "description": "The shopping intent or use case description",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Optional category slug to narrow results",
+                },
+                "max_price": {
+                    "type": "number",
+                    "description": "Optional maximum price constraint",
+                },
+            },
+            "required": ["intent"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="rank_products_by_budget",
+        description=(
+            "Find and rank products within a given budget, sorted by value "
+            "(best discount, most features for price)."
+        ),
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "budget": {
+                    "type": "number",
+                    "description": "Maximum budget in dollars",
+                },
+                "category": {
+                    "type": "string",
+                    "description": "Optional category slug to filter by",
+                },
+            },
+            "required": ["budget"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="suggest_alternatives",
+        description=(
+            "Given a product ID, find similar or alternative products "
+            "in the same category and price range."
+        ),
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string",
+                    "description": "The UUID of the reference product",
+                },
+                "price_range_percent": {
+                    "type": "number",
+                    "description": "How far from the original price to search (default 30 = ±30%)",
+                },
+            },
+            "required": ["product_id"],
+        },
+    ),
+    types.FunctionDeclaration(
+        name="find_best_value_products",
+        description=(
+            "Find products with the highest discounts (biggest gap between "
+            "original_price and current price). Great for deal hunters."
+        ),
+        parameters_json_schema={
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "Optional category slug to filter by",
+                },
+                "limit": {
+                    "type": "number",
+                    "description": "Number of results to return (default 10)",
+                },
+            },
         },
     ),
 ]
@@ -399,12 +514,215 @@ async def _compare_products(db: AsyncSession, args: dict) -> dict:
     }
 
 
+async def _recommend_products(db: AsyncSession, args: dict) -> dict:
+    intent = args.get("intent", "")
+    query = (
+        select(Product)
+        .where(Product.is_active == True)  # noqa: E712
+        .options(joinedload(Product.shop), joinedload(Product.category))
+    )
+
+    if intent:
+        query = query.where(
+            Product.name.ilike(f"%{intent}%") | Product.description.ilike(f"%{intent}%")
+        )
+
+    if category_slug := args.get("category"):
+        cat_subquery = select(Category.id).where(Category.slug == category_slug)
+        query = query.where(Product.category_id.in_(cat_subquery))
+
+    if (max_price := args.get("max_price")) is not None:
+        query = query.where(Product.price <= max_price)
+
+    result = await db.execute(query.order_by(Product.created_at.desc()).limit(10))
+    products = list(result.scalars().unique().all())
+
+    return {
+        "intent": intent,
+        "products": [
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "description": (p.description or "")[:200],
+                "price": float(p.price),
+                "original_price": float(p.original_price) if p.original_price else None,
+                "attributes": p.attributes,
+                "shop_name": p.shop.name if p.shop else None,
+                "category_name": p.category.name if p.category else None,
+                "on_sale": p.original_price is not None and p.original_price > p.price,
+            }
+            for p in products
+        ],
+        "total_found": len(products),
+    }
+
+
+async def _rank_products_by_budget(db: AsyncSession, args: dict) -> dict:
+    budget = args.get("budget")
+    if not budget or budget <= 0:
+        return {"error": "Budget must be a positive number"}
+
+    query = (
+        select(Product)
+        .where(Product.is_active == True, Product.price <= budget)  # noqa: E712
+        .options(joinedload(Product.shop), joinedload(Product.category))
+    )
+
+    if category_slug := args.get("category"):
+        cat_subquery = select(Category.id).where(Category.slug == category_slug)
+        query = query.where(Product.category_id.in_(cat_subquery))
+
+    from sqlalchemy import case, desc
+
+    discount_expr = case(
+        (
+            (Product.original_price.isnot(None)) & (Product.original_price > Product.price),
+            Product.original_price - Product.price,
+        ),
+        else_=0,
+    )
+    query = query.order_by(desc(discount_expr), desc(Product.price))
+
+    result = await db.execute(query.limit(10))
+    products = list(result.scalars().unique().all())
+
+    return {
+        "budget": budget,
+        "products": [
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "price": float(p.price),
+                "original_price": float(p.original_price) if p.original_price else None,
+                "discount_percent": (
+                    round((1 - float(p.price) / float(p.original_price)) * 100)
+                    if p.original_price and p.original_price > p.price
+                    else 0
+                ),
+                "attributes": p.attributes,
+                "shop_name": p.shop.name if p.shop else None,
+                "category_name": p.category.name if p.category else None,
+                "on_sale": p.original_price is not None and p.original_price > p.price,
+            }
+            for p in products
+        ],
+        "total_found": len(products),
+    }
+
+
+async def _suggest_alternatives(db: AsyncSession, args: dict) -> dict:
+    try:
+        product_id = uuid_mod.UUID(args["product_id"])
+    except (ValueError, KeyError):
+        return {"error": "Invalid product ID"}
+
+    result = await db.execute(
+        select(Product)
+        .where(Product.id == product_id, Product.is_active.is_(True))
+        .options(joinedload(Product.category))
+    )
+    reference = result.scalar_one_or_none()
+    if not reference:
+        return {"error": "Reference product not found"}
+
+    range_pct = args.get("price_range_percent", 30)
+    price_low = float(reference.price) * (1 - range_pct / 100)
+    price_high = float(reference.price) * (1 + range_pct / 100)
+
+    alt_result = await db.execute(
+        select(Product)
+        .where(
+            Product.is_active.is_(True),
+            Product.id != product_id,
+            Product.category_id == reference.category_id,
+            Product.price.between(price_low, price_high),
+        )
+        .options(joinedload(Product.shop), joinedload(Product.category))
+        .order_by(Product.price.asc())
+        .limit(8)
+    )
+    alternatives = list(alt_result.scalars().unique().all())
+
+    return {
+        "reference": {
+            "id": str(reference.id),
+            "name": reference.name,
+            "price": float(reference.price),
+            "category_name": reference.category.name if reference.category else None,
+        },
+        "alternatives": [
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "price": float(p.price),
+                "original_price": float(p.original_price) if p.original_price else None,
+                "attributes": p.attributes,
+                "shop_name": p.shop.name if p.shop else None,
+                "category_name": p.category.name if p.category else None,
+                "on_sale": p.original_price is not None and p.original_price > p.price,
+            }
+            for p in alternatives
+        ],
+        "total_found": len(alternatives),
+    }
+
+
+async def _find_best_value_products(db: AsyncSession, args: dict) -> dict:
+    limit = min(args.get("limit", 10), 20)
+
+    from sqlalchemy import desc
+
+    query = (
+        select(Product)
+        .where(
+            Product.is_active == True,  # noqa: E712
+            Product.original_price.isnot(None),
+            Product.original_price > Product.price,
+        )
+        .options(joinedload(Product.shop), joinedload(Product.category))
+    )
+
+    if category_slug := args.get("category"):
+        cat_subquery = select(Category.id).where(Category.slug == category_slug)
+        query = query.where(Product.category_id.in_(cat_subquery))
+
+    query = query.order_by(desc(Product.original_price - Product.price))
+
+    result = await db.execute(query.limit(limit))
+    products = list(result.scalars().unique().all())
+
+    return {
+        "products": [
+            {
+                "id": str(p.id),
+                "name": p.name,
+                "price": float(p.price),
+                "original_price": float(p.original_price) if p.original_price else None,
+                "savings_amount": float(p.original_price or 0) - float(p.price),
+                "savings_percent": (
+                    round((1 - float(p.price) / float(p.original_price)) * 100)
+                    if p.original_price and float(p.original_price) > 0
+                    else 0
+                ),
+                "shop_name": p.shop.name if p.shop else None,
+                "category_name": p.category.name if p.category else None,
+            }
+            for p in products
+        ],
+        "total_found": len(products),
+    }
+
+
 _TOOL_HANDLERS: dict[str, Any] = {
     "search_products": _search_products,
     "get_product_details": _get_product_details,
     "find_coupons": _find_coupons,
     "get_shop_info": _get_shop_info,
     "compare_products": _compare_products,
+    "recommend_products": _recommend_products,
+    "rank_products_by_budget": _rank_products_by_budget,
+    "suggest_alternatives": _suggest_alternatives,
+    "find_best_value_products": _find_best_value_products,
 }
 
 
@@ -440,6 +758,10 @@ _TOOL_DISPLAY_NAMES = {
     "find_coupons": "Finding coupons",
     "get_shop_info": "Looking up shop info",
     "compare_products": "Comparing products",
+    "recommend_products": "Finding recommendations",
+    "rank_products_by_budget": "Ranking by budget",
+    "suggest_alternatives": "Finding alternatives",
+    "find_best_value_products": "Finding best deals",
 }
 
 MAX_TOOL_ROUNDS = 5

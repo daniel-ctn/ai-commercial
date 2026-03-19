@@ -5,6 +5,24 @@ import { useAuth } from '#/lib/auth'
 import { useChat, chatApi } from '#/lib/chat'
 import { ChatMessageBubble } from '#/components/chat/ChatMessage'
 
+const SUGGESTION_MARKER = 'You might also want to ask:'
+const CHIP_BULLET_PREFIX = /^[-*\u2022]\s*/u
+
+function splitSuggestionContent(content: string): { body: string; chips: string[] } {
+  const marker = content.indexOf(SUGGESTION_MARKER)
+  if (marker === -1) return { body: content, chips: [] }
+
+  const body = content.slice(0, marker).trimEnd()
+  const tail = content.slice(marker + SUGGESTION_MARKER.length)
+  const chips = tail
+    .split('\n')
+    .map((line) => line.replace(CHIP_BULLET_PREFIX, '').replace(/\*\*/g, '').trim())
+    .filter((line) => line.length > 5 && line.length < 120)
+    .slice(0, 3)
+
+  return { body, chips }
+}
+
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -23,6 +41,11 @@ export function ChatWidget() {
   } = useChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const lastMessage = messages.at(-1)
+  const lastAssistantContent =
+    lastMessage?.role === 'assistant' && !lastMessage.isStreaming
+      ? splitSuggestionContent(lastMessage.content)
+      : null
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -201,14 +224,38 @@ export function ChatWidget() {
               </div>
             ) : (
               <div className="space-y-3">
-                {messages.map((msg) => (
-                  <ChatMessageBubble key={msg.id} message={msg} />
-                ))}
+                {messages.map((msg) => {
+                  const displayMessage =
+                    lastAssistantContent &&
+                    msg.id === lastMessage?.id &&
+                    lastAssistantContent.chips.length > 0
+                      ? {
+                          ...msg,
+                          content: lastAssistantContent.body || msg.content,
+                        }
+                      : msg
+
+                  return <ChatMessageBubble key={msg.id} message={displayMessage} />
+                })}
 
                 {statusMessage && (
                   <div className="flex items-center gap-2 text-xs text-[var(--sea-ink-soft)]">
                     <Loader2 className="size-3 animate-spin" />
                     {statusMessage}
+                  </div>
+                )}
+
+                {!isLoading && lastAssistantContent && lastAssistantContent.chips.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {lastAssistantContent.chips.map((chip) => (
+                      <button
+                        key={chip}
+                        onClick={() => { setInput(chip); inputRef.current?.focus() }}
+                        className="rounded-full border border-[var(--line)] bg-[var(--chip-bg)] px-3 py-1.5 text-xs text-[var(--sea-ink-soft)] transition-colors hover:border-[var(--lagoon)] hover:text-[var(--lagoon)]"
+                      >
+                        {chip}
+                      </button>
+                    ))}
                   </div>
                 )}
 

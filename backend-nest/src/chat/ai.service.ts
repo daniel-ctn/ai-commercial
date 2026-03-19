@@ -29,15 +29,38 @@ Your capabilities via tools:
 - Find active coupons and deals
 - Look up shop information and their product catalog
 - Compare products side by side
+- Recommend products based on use case, gift ideas, or feature requirements
+- Rank products within a budget for best value
+- Suggest alternatives to a specific product
+- Find the best discounted products across the platform
 
 Guidelines:
-- Always use tools to look up real data — never invent products or prices.
+- Always use tools to look up real data — never invent products, prices, or attributes.
 - When mentioning products, include the name, price, and shop name.
 - If a product is on sale, highlight the original price and the discount.
 - When showing coupons, include the code, discount amount, and expiry.
 - Be concise and helpful. Use bullet points or short paragraphs.
 - If no results are found, say so and suggest alternatives or broader searches.
-- For product comparisons, highlight key differences (price, features, shop).`;
+- For product comparisons, highlight key differences (price, features, shop).
+
+Intent handling:
+- Budget shopping: Use rank_products_by_budget to find the best products within a price limit.
+- Gift search: Use recommend_products with the gift context to suggest suitable items.
+- Feature-based matching: Use search_products with relevant terms, then compare attributes.
+- Shop trust/value: Use get_shop_info to compare shops' offerings and active deals.
+
+Structured response formatting:
+- For product recommendations, format each as: **Product Name** — $price (Shop Name). Add a brief reason why it's recommended.
+- For comparison summaries, start with "**Best for price:**" / "**Best for features:**" / "**Best overall:**" callouts.
+- For coupon highlights, format as: Code \`CODE\` — discount details, expires DATE.
+- At the end of your response, suggest 2-3 follow-up questions the user might ask, formatted as a bullet list starting with "You might also want to ask:".
+
+Guardrails:
+- Never claim a product has a feature that is not in its attributes data.
+- Never state opinions about product quality unless directly supported by the data (e.g., price, specs, sale status).
+- If asked to compare and the products lack comparable attributes, say so honestly.
+- Never guarantee availability, delivery, or warranty — only present the data from our platform.
+- If a query is outside your capabilities (e.g., "is this brand reliable?"), acknowledge the limitation and redirect to what you can help with.`;
 
 const TOOL_DECLARATIONS: FunctionDeclaration[] = [
   {
@@ -104,6 +127,85 @@ const TOOL_DECLARATIONS: FunctionDeclaration[] = [
       required: ['product_ids'],
     },
   },
+  {
+    name: 'recommend_products',
+    description:
+      'Recommend products based on a use case, intent, or context (e.g., "gift for a gamer", "work from home setup", "best phone under $500"). Returns scored results.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        intent: {
+          type: Type.STRING,
+          description: 'The shopping intent or use case description',
+        },
+        category: {
+          type: Type.STRING,
+          description: 'Optional category slug to narrow results',
+        },
+        max_price: {
+          type: Type.NUMBER,
+          description: 'Optional maximum price constraint',
+        },
+      },
+      required: ['intent'],
+    },
+  },
+  {
+    name: 'rank_products_by_budget',
+    description:
+      'Find and rank products within a given budget, sorted by value (best discount, most features for price). Useful for budget-conscious shopping.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        budget: {
+          type: Type.NUMBER,
+          description: 'Maximum budget in dollars',
+        },
+        category: {
+          type: Type.STRING,
+          description: 'Optional category slug to filter by',
+        },
+      },
+      required: ['budget'],
+    },
+  },
+  {
+    name: 'suggest_alternatives',
+    description:
+      'Given a product ID, find similar or alternative products in the same category and price range.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        product_id: {
+          type: Type.STRING,
+          description: 'The UUID of the reference product to find alternatives for',
+        },
+        price_range_percent: {
+          type: Type.NUMBER,
+          description: 'How far from the original price to search, as a percentage (default 30 = ±30%)',
+        },
+      },
+      required: ['product_id'],
+    },
+  },
+  {
+    name: 'find_best_value_products',
+    description:
+      'Find products with the highest discounts (biggest gap between original_price and current price). Great for deal hunters.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        category: {
+          type: Type.STRING,
+          description: 'Optional category slug to filter by',
+        },
+        limit: {
+          type: Type.NUMBER,
+          description: 'Number of results to return (default 10)',
+        },
+      },
+    },
+  },
 ];
 
 const TOOL_DISPLAY_NAMES: Record<string, string> = {
@@ -112,6 +214,10 @@ const TOOL_DISPLAY_NAMES: Record<string, string> = {
   find_coupons: 'Finding coupons',
   get_shop_info: 'Looking up shop info',
   compare_products: 'Comparing products',
+  recommend_products: 'Finding recommendations',
+  rank_products_by_budget: 'Ranking by budget',
+  suggest_alternatives: 'Finding alternatives',
+  find_best_value_products: 'Finding best deals',
 };
 
 const MAX_TOOL_ROUNDS = 5;
@@ -219,6 +325,14 @@ export class AiService {
           return await this.getShopInfo(args);
         case 'compare_products':
           return await this.compareProducts(args);
+        case 'recommend_products':
+          return await this.recommendProducts(args);
+        case 'rank_products_by_budget':
+          return await this.rankProductsByBudget(args);
+        case 'suggest_alternatives':
+          return await this.suggestAlternatives(args);
+        case 'find_best_value_products':
+          return await this.findBestValueProducts(args);
         default:
           return { error: `Unknown tool: ${name}` };
       }
@@ -422,6 +536,189 @@ export class AiService {
         category_name: p.category?.name ?? null,
         on_sale: p.original_price != null && p.original_price > p.price,
       })),
+    };
+  }
+
+  private async recommendProducts(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const intent = (args.intent as string) ?? '';
+    const qb = this.productsRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.shop', 'shop')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.is_active = :active', { active: true });
+
+    if (intent) {
+      qb.andWhere(
+        "(product.name ILIKE :search OR product.description ILIKE :search)",
+        { search: `%${intent}%` },
+      );
+    }
+
+    const categorySlug = args.category as string | undefined;
+    if (categorySlug) {
+      qb.andWhere('category.slug = :catSlug', { catSlug: categorySlug });
+    }
+
+    if (args.max_price != null) {
+      qb.andWhere('product.price <= :maxPrice', { maxPrice: args.max_price });
+    }
+
+    const products = await qb
+      .orderBy('product.created_at', 'DESC')
+      .take(10)
+      .getMany();
+
+    return {
+      intent,
+      products: products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: (p.description ?? '').slice(0, 200),
+        price: p.price,
+        original_price: p.original_price,
+        attributes: p.attributes,
+        shop_name: p.shop?.name ?? null,
+        category_name: p.category?.name ?? null,
+        on_sale: p.original_price != null && p.original_price > p.price,
+      })),
+      total_found: products.length,
+    };
+  }
+
+  private async rankProductsByBudget(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const budget = args.budget as number;
+    if (!budget || budget <= 0) return { error: 'Budget must be a positive number' };
+
+    const qb = this.productsRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.shop', 'shop')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.is_active = :active', { active: true })
+      .andWhere('product.price <= :budget', { budget });
+
+    const categorySlug = args.category as string | undefined;
+    if (categorySlug) {
+      qb.andWhere('category.slug = :catSlug', { catSlug: categorySlug });
+    }
+
+    // Prioritise products on sale (biggest discount first), then by price descending (most product for money)
+    qb.orderBy(
+      'CASE WHEN product.original_price IS NOT NULL AND product.original_price > product.price THEN product.original_price - product.price ELSE 0 END',
+      'DESC',
+    );
+    qb.addOrderBy('product.price', 'DESC');
+
+    const products = await qb.take(10).getMany();
+
+    return {
+      budget,
+      products: products.map((p) => {
+        const discount =
+          p.original_price != null && p.original_price > p.price
+            ? Math.round((1 - p.price / p.original_price) * 100)
+            : 0;
+        return {
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          original_price: p.original_price,
+          discount_percent: discount,
+          attributes: p.attributes,
+          shop_name: p.shop?.name ?? null,
+          category_name: p.category?.name ?? null,
+          on_sale: discount > 0,
+        };
+      }),
+      total_found: products.length,
+    };
+  }
+
+  private async suggestAlternatives(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const productId = args.product_id as string;
+    if (!productId) return { error: 'Invalid product ID' };
+
+    const reference = await this.productsRepo.findOne({
+      where: { id: productId, is_active: true },
+      relations: ['category'],
+    });
+    if (!reference) return { error: 'Reference product not found' };
+
+    const rangePercent = (args.price_range_percent as number) ?? 30;
+    const priceLow = reference.price * (1 - rangePercent / 100);
+    const priceHigh = reference.price * (1 + rangePercent / 100);
+
+    const alternatives = await this.productsRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.shop', 'shop')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.is_active = :active', { active: true })
+      .andWhere('product.id != :refId', { refId: productId })
+      .andWhere('product.category_id = :catId', { catId: reference.category_id })
+      .andWhere('product.price BETWEEN :low AND :high', { low: priceLow, high: priceHigh })
+      .orderBy('product.price', 'ASC')
+      .take(8)
+      .getMany();
+
+    return {
+      reference: {
+        id: reference.id,
+        name: reference.name,
+        price: reference.price,
+        category_name: reference.category?.name ?? null,
+      },
+      alternatives: alternatives.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        original_price: p.original_price,
+        attributes: p.attributes,
+        shop_name: p.shop?.name ?? null,
+        category_name: p.category?.name ?? null,
+        on_sale: p.original_price != null && p.original_price > p.price,
+      })),
+      total_found: alternatives.length,
+    };
+  }
+
+  private async findBestValueProducts(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const limit = Math.min((args.limit as number) ?? 10, 20);
+
+    const qb = this.productsRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.shop', 'shop')
+      .leftJoinAndSelect('product.category', 'category')
+      .where('product.is_active = :active', { active: true })
+      .andWhere('product.original_price IS NOT NULL')
+      .andWhere('product.original_price > product.price');
+
+    const categorySlug = args.category as string | undefined;
+    if (categorySlug) {
+      qb.andWhere('category.slug = :catSlug', { catSlug: categorySlug });
+    }
+
+    qb.orderBy('product.original_price - product.price', 'DESC');
+
+    const products = await qb.take(limit).getMany();
+
+    return {
+      products: products.map((p) => {
+        const savingsAmount = (p.original_price ?? 0) - p.price;
+        const savingsPercent =
+          p.original_price && p.original_price > 0
+            ? Math.round((1 - p.price / p.original_price) * 100)
+            : 0;
+        return {
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          original_price: p.original_price,
+          savings_amount: savingsAmount,
+          savings_percent: savingsPercent,
+          shop_name: p.shop?.name ?? null,
+          category_name: p.category?.name ?? null,
+        };
+      }),
+      total_found: products.length,
     };
   }
 }

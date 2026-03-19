@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeftRight, Trash2, X, Plus, Clock } from 'lucide-react'
+import { ArrowLeftRight, Trash2, X, Plus, Clock, Sparkles, Loader2 } from 'lucide-react'
 import { Button } from '#/components/ui/button'
 import { Badge } from '#/components/ui/badge'
 import { Skeleton } from '#/components/ui/skeleton'
-import { compareQueryOptions } from '#/lib/queries'
+import { compareQueryOptions, compareSummaryQueryOptions } from '#/lib/queries'
 import { useCompareList } from '#/lib/compare'
 import { useRecentlyViewed } from '#/lib/recently-viewed'
 
@@ -23,6 +23,8 @@ function ComparePage() {
 
   return (
     <main className="page-wrap py-8">
+      <AiCompareSummary ids={ids} />
+
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="display-title text-3xl font-bold">Compare Products</h1>
@@ -195,6 +197,76 @@ function CompareRow({
       </td>
       {children}
     </tr>
+  )
+}
+
+function AiCompareSummary({ ids }: { ids: string[] }) {
+  const { data, isLoading, isError } = useQuery(compareSummaryQueryOptions(ids))
+
+  if (isError) return null
+
+  return (
+    <div className="mb-6 rounded-xl border border-border bg-muted/30 p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold">AI Comparison Summary</h3>
+      </div>
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Generating summary...
+        </div>
+      ) : data?.summary ? (
+        <div className="prose prose-sm max-w-none text-sm text-muted-foreground [&_strong]:text-foreground">
+          {data.summary.split('\n\n').map((para, i) => {
+            const lines = para.split('\n')
+            const isList = lines.every(
+              (l) => l.trim().startsWith('- ') || l.trim().startsWith('* ') || l.trim() === '',
+            )
+            if (isList && lines.some((l) => l.trim())) {
+              return (
+                <ul key={i} className="my-1 list-disc space-y-0.5 pl-4">
+                  {lines
+                    .filter((l) => l.trim())
+                    .map((line, j) => (
+                      <li key={j}>
+                        <SummaryInline text={line.replace(/^[-*]\s*/, '')} />
+                      </li>
+                    ))}
+                </ul>
+              )
+            }
+            return (
+              <p key={i} className="my-1">
+                {lines.map((line, j) => (
+                  <span key={j}>
+                    {j > 0 && <br />}
+                    <SummaryInline text={line} />
+                  </span>
+                ))}
+              </p>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function SummaryInline({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('**') && part.endsWith('**') ? (
+          <strong key={i} className="font-semibold text-foreground">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
   )
 }
 

@@ -161,6 +161,18 @@ export const compareQueryOptions = (ids: string[]) => {
   })
 }
 
+export const compareSummaryQueryOptions = (ids: string[]) => {
+  const params = new URLSearchParams()
+  ids.forEach((id) => params.append('ids', id))
+
+  return queryOptions({
+    queryKey: ['compare-summary', ids],
+    queryFn: () => api.get<{ summary: string }>(`/compare/summary?${params.toString()}`),
+    enabled: ids.length >= 2,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 // ── Admin ────────────────────────────────────────────────────────
 
 export const adminStatsQueryOptions = () =>

@@ -6,6 +6,8 @@ interface ChatMessageProps {
   message: ChatUIMessage
 }
 
+const BULLET_PREFIX = /^[-*\u2022]\s*/u
+
 /**
  * Renders a single chat message bubble.
  *
@@ -75,19 +77,16 @@ function AssistantContent({ content }: { content: string }) {
 
 function AssistantParagraph({ text }: { text: string }) {
   const lines = text.split('\n')
+  const isList = lines.every((line) => BULLET_PREFIX.test(line.trim()) || line.trim() === '')
 
-  const isList = lines.every(
-    (l) => l.trim().startsWith('- ') || l.trim().startsWith('• ') || l.trim() === '',
-  )
-
-  if (isList && lines.some((l) => l.trim())) {
+  if (isList && lines.some((line) => line.trim())) {
     return (
       <ul className="space-y-1 pl-3">
         {lines
-          .filter((l) => l.trim())
+          .filter((line) => line.trim())
           .map((line, i) => (
             <li key={i} className="list-disc text-sm leading-relaxed marker:text-[var(--lagoon)]">
-              <InlineFormatted text={line.replace(/^[-•]\s*/, '')} />
+              <InlineFormatted text={line.replace(BULLET_PREFIX, '')} />
             </li>
           ))}
       </ul>

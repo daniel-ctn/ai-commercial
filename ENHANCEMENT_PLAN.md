@@ -154,27 +154,27 @@ Turn the chatbot from a helpful lookup tool into a stronger shopping assistant.
 
 ### Deliverables
 
-- Add recommendation-oriented tools:
-  - `recommend_products`
-  - `rank_products_by_budget`
-  - `suggest_alternatives`
-  - `find_best_value_products`
-- Add richer intent handling:
-  - Budget shopping
-  - Gift search
-  - Feature-based product matching
-  - Shop trust or value comparisons
-- Add structured AI responses for product cards, comparison summaries, and coupon highlights
-- Add follow-up suggestion chips based on the previous answer
-- Add AI comparison summaries on the compare page
-- Add AI-generated "best choice" callouts using product specs, price, and sale data
-- Add guardrails to prevent unsupported claims and hallucinated attributes
+- [x] Add recommendation-oriented tools:
+  - [x] `recommend_products`
+  - [x] `rank_products_by_budget`
+  - [x] `suggest_alternatives`
+  - [x] `find_best_value_products`
+- [x] Add richer intent handling:
+  - [x] Budget shopping
+  - [x] Gift search
+  - [x] Feature-based product matching
+  - [x] Shop trust or value comparisons
+- [x] Add structured AI responses for product cards, comparison summaries, and coupon highlights
+- [x] Add follow-up suggestion chips based on the previous answer
+- [x] Add AI comparison summaries on the compare page
+- [x] Add AI-generated "best choice" callouts using product specs, price, and sale data
+- [x] Add guardrails to prevent unsupported claims and hallucinated attributes
 
 ### Success criteria
 
-- AI responses feel useful for decision-making, not just retrieval
-- Compare and discovery experiences become more differentiated
-- Users can ask broader shopping questions and still get grounded answers
+- [x] AI responses feel useful for decision-making, not just retrieval
+- [x] Compare and discovery experiences become more differentiated
+- [x] Users can ask broader shopping questions and still get grounded answers
 
 ## Phase 4: Discovery, Search, and Personalization
 
