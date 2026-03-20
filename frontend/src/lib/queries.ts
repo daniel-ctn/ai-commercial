@@ -30,9 +30,11 @@ import type {
   AdminShop,
   AdminStats,
   AdminUser,
+  Cart,
   Category,
   CompareResponse,
   Coupon,
+  Order,
   PaginatedResponse,
   Product,
   QualityReport,
@@ -485,3 +487,83 @@ export function useBulkToggleShopAdminProducts() {
     },
   })
 }
+
+// ── Cart ──────────────────────────────────────────────────────────
+
+export const cartQueryOptions = () =>
+  queryOptions({
+    queryKey: ['cart'],
+    queryFn: () => api.get<Cart>('/cart'),
+    retry: false,
+  })
+
+export function useAddToCart() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ product_id, quantity = 1 }: { product_id: string; quantity?: number }) =>
+      api.post<Cart>('/cart/items', { product_id, quantity }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cart'] })
+      toast.success('Added to cart')
+    },
+  })
+}
+
+export function useUpdateCartItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ itemId, quantity }: { itemId: string; quantity: number }) =>
+      api.patch<Cart>(`/cart/items/${itemId}`, { quantity }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cart'] })
+    },
+  })
+}
+
+export function useRemoveCartItem() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (itemId: string) => api.delete<Cart>(`/cart/items/${itemId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cart'] })
+      toast.success('Removed from cart')
+    },
+  })
+}
+
+export function useClearCart() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete('/cart'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cart'] })
+    },
+  })
+}
+
+export function useCheckout() {
+  return useMutation({
+    mutationFn: (data: { coupon_code?: string; shipping_name?: string; shipping_address?: string }) =>
+      api.post<{ checkout_url: string; order_id: string }>('/orders/checkout', data),
+    onSuccess: (data) => {
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      }
+    },
+  })
+}
+
+// ── Orders ────────────────────────────────────────────────────────
+
+export const myOrdersQueryOptions = (page = 1) =>
+  queryOptions({
+    queryKey: ['orders', 'my', page],
+    queryFn: () => api.get<PaginatedResponse<Order>>(`/orders/my?page=${page}&limit=10`),
+  })
+
+export const orderDetailQueryOptions = (orderId: string) =>
+  queryOptions({
+    queryKey: ['orders', orderId],
+    queryFn: () => api.get<Order>(`/orders/${orderId}`),
+    enabled: !!orderId,
+  })

@@ -23,7 +23,7 @@ import { ErrorTrackerService } from './common/metrics/error-tracker.service';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
   const frontendOrigins = config
     .get<string>('FRONTEND_URL', 'http://localhost:3000')
@@ -46,6 +46,7 @@ async function bootstrap() {
       { path: 'health/features', method: RequestMethod.GET },
       { path: 'health/metrics', method: RequestMethod.GET },
       { path: 'health/errors', method: RequestMethod.GET },
+      { path: 'webhooks/stripe', method: RequestMethod.POST },
       { path: 'sitemap.xml', method: RequestMethod.GET },
     ],
   });

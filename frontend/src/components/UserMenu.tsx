@@ -42,6 +42,9 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
+      <Link to="/orders" className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline">
+        My Orders
+      </Link>
       <span className="hidden text-sm font-medium sm:inline">
         {user.name}
       </span>

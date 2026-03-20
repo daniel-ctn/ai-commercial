@@ -285,6 +285,62 @@ Make the system easier to monitor, debug, and scale.
 - [x] Production readiness is measurable
 - [x] Operational debugging time is reduced
 
+## Phase 8: Payments and Order Management
+
+### Objective
+
+Enable real transactions so users can purchase products and shops can receive orders.
+
+### Deliverables
+
+- [x] Add Stripe integration (or equivalent payment provider):
+  - [x] API keys and webhook secret in environment config
+  - [x] Stripe SDK setup in both NestJS and FastAPI
+- [x] Add cart system:
+  - [x] Add to cart, update quantity, remove from cart
+  - [x] Cart persistence for authenticated users (database-backed)
+  - [x] Cart summary with subtotal, discount, and total calculations
+  - [x] Auto-apply eligible coupons at checkout
+- [x] Add checkout flow:
+  - [x] Shipping/billing address collection
+  - [x] Stripe Checkout Session or Payment Intent creation
+  - [x] Order confirmation page with order summary
+- [x] Add order management:
+  - [x] Order entity with status tracking (pending, paid, shipped, delivered, cancelled, refunded)
+  - [x] Order line items linked to products and applied coupons
+  - [x] Order history page for users
+  - [x] Order detail page with status timeline
+- [x] Add payment webhook handling:
+  - [x] Stripe webhook endpoint for payment confirmation, failures, and refunds
+  - [x] Idempotent event processing with webhook signature verification
+  - [x] Automatic order status updates on payment events
+- [x] Add shop admin order views:
+  - [x] Orders received by shop with filtering and status updates
+  - [x] Mark orders as shipped/fulfilled
+  - [ ] Order revenue summary in shop admin dashboard
+- [ ] Add admin order oversight:
+  - [ ] All-orders view with filtering by status, shop, and date range
+  - [ ] Refund initiation from admin panel
+  - [ ] Order analytics (revenue, order count, average order value)
+- [x] Add frontend checkout UI:
+  - [x] Cart page with quantity controls and coupon application
+  - [x] Checkout page with Stripe Elements or redirect to Stripe Checkout
+  - [x] Order success and failure pages
+  - [x] Order history and detail pages in user account area
+- [ ] Add email notifications (optional):
+  - [ ] Order confirmation email
+  - [ ] Shipping notification email
+  - [ ] Refund confirmation email
+
+### Success criteria
+
+- [x] Users can add products to a cart and complete a purchase
+- [x] Payments are processed securely through Stripe
+- [x] Orders are tracked from creation through fulfillment
+- [x] Shop admins can view and manage their incoming orders
+- [x] Coupons integrate correctly with the checkout total
+- [x] Webhook events are handled idempotently and reliably
+
 ## 5. Recommended Execution Order
 
 If time is limited, this is the best sequence:
@@ -297,6 +353,7 @@ If time is limited, this is the best sequence:
 6. Phase 5: Shop admin and business intelligence
 7. Phase 6: SEO, content, and public product maturity
 8. Phase 7: Observability and production operations
+9. Phase 8: Payments and order management
 
 ## 6. Suggested First Milestone
 
@@ -324,7 +381,6 @@ These are strong later additions once the main roadmap is stable:
 
 - Product price history charts
 - Coupon copy-to-clipboard analytics
-- Multi-shop cart simulation
 - Product review or rating system
 - Notification center for saved alerts
 - Admin audit logs

@@ -19,6 +19,9 @@ httpx>=0.28.1
 # AI (Google Gemini)
 google-genai>=1.68.0
 
+# Payments (Stripe)
+stripe>=14.4.1
+
 # Config
 pydantic[email]>=2.12.5
 pydantic-settings>=2.13.1

@@ -20,12 +20,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Shop } from '../shops/entities/shop.entity';
 import { AdminProductsQueryDto, AdminCouponsQueryDto } from './dto/admin-query.dto';
+import { OrdersService } from '../orders/orders.service';
 
 @Controller('shop-admin')
 @UseGuards(JwtAuthGuard, ShopAdminGuard)
 export class ShopAdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly ordersService: OrdersService,
     @InjectRepository(Shop) private readonly shopsRepo: Repository<Shop>,
   ) {}
 
@@ -99,5 +101,26 @@ export class ShopAdminController {
   ) {
     const shop = await this.getOwnedShop(user.id);
     return this.adminService.bulkAssignCategoryForShop(body.ids, body.category_id, shop.id);
+  }
+
+  @Get('orders')
+  async getOrders(
+    @CurrentUser() user: { id: string },
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('status') status?: string,
+  ) {
+    const shop = await this.getOwnedShop(user.id);
+    return this.ordersService.getShopOrders(shop.id, page ?? 1, limit ?? 10, status);
+  }
+
+  @Patch('orders/:id/status')
+  async updateOrderStatus(
+    @CurrentUser() user: { id: string },
+    @Param('id', ParseUUIDPipe) orderId: string,
+    @Body('status') status: string,
+  ) {
+    await this.getOwnedShop(user.id);
+    return this.ordersService.updateStatus(orderId, status as any);
   }
 }

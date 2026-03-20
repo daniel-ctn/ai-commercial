@@ -13,17 +13,21 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ShopAdminRouteImport } from './routes/shop-admin'
 import { Route as DealsRouteImport } from './routes/deals'
 import { Route as CompareRouteImport } from './routes/compare'
+import { Route as CartRouteImport } from './routes/cart'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShopsIndexRouteImport } from './routes/shops/index'
 import { Route as ShopAdminIndexRouteImport } from './routes/shop-admin/index'
 import { Route as ProductsIndexRouteImport } from './routes/products/index'
+import { Route as OrdersIndexRouteImport } from './routes/orders/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ShopsShopIdRouteImport } from './routes/shops/$shopId'
 import { Route as ShopAdminProductsRouteImport } from './routes/shop-admin/products'
+import { Route as ShopAdminOrdersRouteImport } from './routes/shop-admin/orders'
 import { Route as ShopAdminCouponsRouteImport } from './routes/shop-admin/coupons'
 import { Route as ProductsProductIdRouteImport } from './routes/products/$productId'
+import { Route as OrdersOrderIdRouteImport } from './routes/orders/$orderId'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
@@ -50,6 +54,11 @@ const DealsRoute = DealsRouteImport.update({
 const CompareRoute = CompareRouteImport.update({
   id: '/compare',
   path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CartRoute = CartRouteImport.update({
+  id: '/cart',
+  path: '/cart',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -82,6 +91,11 @@ const ProductsIndexRoute = ProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersIndexRoute = OrdersIndexRouteImport.update({
+  id: '/orders/',
+  path: '/orders/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -97,6 +111,11 @@ const ShopAdminProductsRoute = ShopAdminProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => ShopAdminRoute,
 } as any)
+const ShopAdminOrdersRoute = ShopAdminOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => ShopAdminRoute,
+} as any)
 const ShopAdminCouponsRoute = ShopAdminCouponsRouteImport.update({
   id: '/coupons',
   path: '/coupons',
@@ -105,6 +124,11 @@ const ShopAdminCouponsRoute = ShopAdminCouponsRouteImport.update({
 const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
   id: '/products/$productId',
   path: '/products/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
+  id: '/orders/$orderId',
+  path: '/orders/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
@@ -147,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRouteWithChildren
+  '/cart': typeof CartRoute
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
   '/shop-admin': typeof ShopAdminRouteWithChildren
@@ -157,11 +182,14 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/shop-admin/coupons': typeof ShopAdminCouponsRoute
+  '/shop-admin/orders': typeof ShopAdminOrdersRoute
   '/shop-admin/products': typeof ShopAdminProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/shop-admin/': typeof ShopAdminIndexRoute
   '/shops/': typeof ShopsIndexRoute
@@ -170,6 +198,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/cart': typeof CartRoute
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -179,11 +208,14 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/shop-admin/coupons': typeof ShopAdminCouponsRoute
+  '/shop-admin/orders': typeof ShopAdminOrdersRoute
   '/shop-admin/products': typeof ShopAdminProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin': typeof AdminIndexRoute
+  '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
   '/shop-admin': typeof ShopAdminIndexRoute
   '/shops': typeof ShopsIndexRoute
@@ -194,6 +226,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admin': typeof AdminRouteWithChildren
+  '/cart': typeof CartRoute
   '/compare': typeof CompareRoute
   '/deals': typeof DealsRoute
   '/shop-admin': typeof ShopAdminRouteWithChildren
@@ -204,11 +237,14 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/orders/$orderId': typeof OrdersOrderIdRoute
   '/products/$productId': typeof ProductsProductIdRoute
   '/shop-admin/coupons': typeof ShopAdminCouponsRoute
+  '/shop-admin/orders': typeof ShopAdminOrdersRoute
   '/shop-admin/products': typeof ShopAdminProductsRoute
   '/shops/$shopId': typeof ShopsShopIdRoute
   '/admin/': typeof AdminIndexRoute
+  '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
   '/shop-admin/': typeof ShopAdminIndexRoute
   '/shops/': typeof ShopsIndexRoute
@@ -220,6 +256,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/cart'
     | '/compare'
     | '/deals'
     | '/shop-admin'
@@ -230,11 +267,14 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/auth/login'
     | '/auth/register'
+    | '/orders/$orderId'
     | '/products/$productId'
     | '/shop-admin/coupons'
+    | '/shop-admin/orders'
     | '/shop-admin/products'
     | '/shops/$shopId'
     | '/admin/'
+    | '/orders/'
     | '/products/'
     | '/shop-admin/'
     | '/shops/'
@@ -243,6 +283,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/cart'
     | '/compare'
     | '/deals'
     | '/sitemap.xml'
@@ -252,11 +293,14 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/auth/login'
     | '/auth/register'
+    | '/orders/$orderId'
     | '/products/$productId'
     | '/shop-admin/coupons'
+    | '/shop-admin/orders'
     | '/shop-admin/products'
     | '/shops/$shopId'
     | '/admin'
+    | '/orders'
     | '/products'
     | '/shop-admin'
     | '/shops'
@@ -266,6 +310,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admin'
+    | '/cart'
     | '/compare'
     | '/deals'
     | '/shop-admin'
@@ -276,11 +321,14 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/auth/login'
     | '/auth/register'
+    | '/orders/$orderId'
     | '/products/$productId'
     | '/shop-admin/coupons'
+    | '/shop-admin/orders'
     | '/shop-admin/products'
     | '/shops/$shopId'
     | '/admin/'
+    | '/orders/'
     | '/products/'
     | '/shop-admin/'
     | '/shops/'
@@ -291,14 +339,17 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AdminRoute: typeof AdminRouteWithChildren
+  CartRoute: typeof CartRoute
   CompareRoute: typeof CompareRoute
   DealsRoute: typeof DealsRoute
   ShopAdminRoute: typeof ShopAdminRouteWithChildren
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  OrdersOrderIdRoute: typeof OrdersOrderIdRoute
   ProductsProductIdRoute: typeof ProductsProductIdRoute
   ShopsShopIdRoute: typeof ShopsShopIdRoute
+  OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
   ShopsIndexRoute: typeof ShopsIndexRoute
   AuthGoogleCallbackRoute: typeof AuthGoogleCallbackRoute
@@ -332,6 +383,13 @@ declare module '@tanstack/react-router' {
       path: '/compare'
       fullPath: '/compare'
       preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cart': {
+      id: '/cart'
+      path: '/cart'
+      fullPath: '/cart'
+      preLoaderRoute: typeof CartRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -376,6 +434,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/': {
+      id: '/orders/'
+      path: '/orders'
+      fullPath: '/orders/'
+      preLoaderRoute: typeof OrdersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -397,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShopAdminProductsRouteImport
       parentRoute: typeof ShopAdminRoute
     }
+    '/shop-admin/orders': {
+      id: '/shop-admin/orders'
+      path: '/orders'
+      fullPath: '/shop-admin/orders'
+      preLoaderRoute: typeof ShopAdminOrdersRouteImport
+      parentRoute: typeof ShopAdminRoute
+    }
     '/shop-admin/coupons': {
       id: '/shop-admin/coupons'
       path: '/coupons'
@@ -409,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/products/$productId'
       fullPath: '/products/$productId'
       preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders/$orderId': {
+      id: '/orders/$orderId'
+      path: '/orders/$orderId'
+      fullPath: '/orders/$orderId'
+      preLoaderRoute: typeof OrdersOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/register': {
@@ -483,12 +562,14 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ShopAdminRouteChildren {
   ShopAdminCouponsRoute: typeof ShopAdminCouponsRoute
+  ShopAdminOrdersRoute: typeof ShopAdminOrdersRoute
   ShopAdminProductsRoute: typeof ShopAdminProductsRoute
   ShopAdminIndexRoute: typeof ShopAdminIndexRoute
 }
 
 const ShopAdminRouteChildren: ShopAdminRouteChildren = {
   ShopAdminCouponsRoute: ShopAdminCouponsRoute,
+  ShopAdminOrdersRoute: ShopAdminOrdersRoute,
   ShopAdminProductsRoute: ShopAdminProductsRoute,
   ShopAdminIndexRoute: ShopAdminIndexRoute,
 }
@@ -501,14 +582,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdminRoute: AdminRouteWithChildren,
+  CartRoute: CartRoute,
   CompareRoute: CompareRoute,
   DealsRoute: DealsRoute,
   ShopAdminRoute: ShopAdminRouteWithChildren,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  OrdersOrderIdRoute: OrdersOrderIdRoute,
   ProductsProductIdRoute: ProductsProductIdRoute,
   ShopsShopIdRoute: ShopsShopIdRoute,
+  OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
   ShopsIndexRoute: ShopsIndexRoute,
   AuthGoogleCallbackRoute: AuthGoogleCallbackRoute,
@@ -516,12 +600,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

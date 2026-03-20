@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     # Google Gemini
     gemini_api_key: str = ""
 
+    # Stripe
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:

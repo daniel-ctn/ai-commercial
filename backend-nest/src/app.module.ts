@@ -29,6 +29,7 @@ import { ChatModule } from './chat/chat.module';
 import { FavoritesModule } from './favorites/favorites.module';
 import { HealthModule } from './health/health.module';
 import { SitemapModule } from './sitemap/sitemap.module';
+import { OrdersModule } from './orders/orders.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -60,6 +61,7 @@ import { validate } from './config/env.validation';
     AdminModule,
     HealthModule,
     SitemapModule,
+    OrdersModule,
   ],
   providers: [
     // Apply rate limiting globally to all routes

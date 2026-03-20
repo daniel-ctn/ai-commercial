@@ -23,6 +23,8 @@ from app.models.product import Product
 from app.models.coupon import Coupon
 from app.models.chat import ChatSession, ChatMessage
 from app.models.favorite import Favorite
+from app.models.cart import Cart, CartItem
+from app.models.order import Order, OrderItem
 
 __all__ = [
     "User",
@@ -33,4 +35,8 @@ __all__ = [
     "ChatSession",
     "ChatMessage",
     "Favorite",
+    "Cart",
+    "CartItem",
+    "Order",
+    "OrderItem",
 ]

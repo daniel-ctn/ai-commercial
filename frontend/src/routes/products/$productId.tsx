@@ -1,11 +1,14 @@
 import { useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { ShoppingCart } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { Card, CardContent } from '#/components/ui/card'
 import { Separator } from '#/components/ui/separator'
 import { Skeleton } from '#/components/ui/skeleton'
-import { productQueryOptions } from '#/lib/queries'
+import { productQueryOptions, useAddToCart } from '#/lib/queries'
+import { useAuth } from '#/lib/auth'
 import { trackProductView } from '#/lib/recently-viewed'
 import { absoluteUrl, buildSeoHead } from '#/lib/seo'
 
@@ -61,6 +64,9 @@ function ProductDetailPage() {
       </main>
     )
   }
+
+  const { user } = useAuth()
+  const addToCart = useAddToCart()
 
   const isOnSale =
     product.original_price != null && product.original_price > product.price
@@ -168,6 +174,18 @@ function ProductDetailPage() {
               </span>
             )}
           </div>
+
+          {user && (
+            <Button
+              size="lg"
+              className="mb-4 w-full sm:w-auto"
+              onClick={() => addToCart.mutate({ product_id: product.id })}
+              disabled={addToCart.isPending}
+            >
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              {addToCart.isPending ? 'Adding...' : 'Add to Cart'}
+            </Button>
+          )}
 
           {product.category_name && (
             <Badge variant="secondary" className="mb-4">

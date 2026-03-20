@@ -82,6 +82,14 @@ class EnvironmentVariables {
   @IsOptional()
   @IsNumber()
   REFRESH_TOKEN_EXPIRE_DAYS?: number;
+
+  @IsOptional()
+  @IsString()
+  STRIPE_SECRET_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  STRIPE_WEBHOOK_SECRET?: string;
 }
 
 export function validate(config: Record<string, unknown>) {

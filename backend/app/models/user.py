@@ -81,6 +81,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    cart: Mapped["Cart | None"] = relationship(  # noqa: F821
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         """Developer-friendly string shown in logs / debugger."""

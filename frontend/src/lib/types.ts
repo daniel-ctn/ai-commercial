@@ -197,3 +197,52 @@ export type ChatSSEEvent =
   | { event: 'chunk'; data: { text: string } }
   | { event: 'done'; data: { text: string } }
   | { event: 'error'; data: { message: string } }
+
+// ── Cart ─────────────────────────────────────────────────────────
+
+export interface CartItem {
+  id: string
+  product_id: string
+  product_name: string
+  product_image: string | null
+  shop_name: string
+  shop_id: string | null
+  quantity: number
+  unit_price: number
+  line_total: number
+}
+
+export interface Cart {
+  id: string
+  items: CartItem[]
+  subtotal: number
+  discount: number
+  total: number
+  item_count: number
+}
+
+// ── Orders ───────────────────────────────────────────────────────
+
+export interface OrderItem {
+  id: string
+  product_id: string | null
+  shop_id: string | null
+  product_name: string
+  quantity: number
+  unit_price: number
+  line_total: number
+}
+
+export interface Order {
+  id: string
+  user_id: string
+  status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled' | 'refunded'
+  subtotal: number
+  discount: number
+  total: number
+  shipping_name: string | null
+  shipping_address: string | null
+  items: OrderItem[]
+  created_at: string
+  updated_at: string
+}

@@ -22,9 +22,13 @@ import { Shop } from '../shops/entities/shop.entity';
 import { Product } from '../products/entities/product.entity';
 import { Coupon } from '../coupons/entities/coupon.entity';
 import { Category } from '../categories/entities/category.entity';
+import { OrdersModule } from '../orders/orders.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Shop, Product, Coupon, Category])],
+  imports: [
+    TypeOrmModule.forFeature([User, Shop, Product, Coupon, Category]),
+    OrdersModule,
+  ],
   controllers: [AdminController, ShopAdminController],
   providers: [AdminService, AiCatalogService],
   exports: [AdminService],

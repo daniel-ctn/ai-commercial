@@ -16,6 +16,7 @@ from sqlalchemy.orm import joinedload
 from app.core.database import get_db
 from app.core.dependencies import get_current_shop_admin
 from app.models.coupon import Coupon
+from app.models.order import Order, OrderItem
 from app.models.product import Product
 from app.models.shop import Shop
 from app.models.user import User
@@ -215,3 +216,77 @@ async def bulk_toggle_my_products(
         .values(is_active=activate)
     )
     return BulkActionResponse(affected=result.rowcount)
+
+
+@router.get("/orders")
+async def get_my_shop_orders(
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=50),
+    order_status: str = Query(default="", alias="status"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_shop_admin),
+):
+    shop = await _get_owned_shop(current_user, db)
+
+    base = (
+        select(Order)
+        .join(OrderItem, OrderItem.order_id == Order.id)
+        .where(OrderItem.shop_id == shop.id)
+        .options(joinedload(Order.items))
+    )
+    if order_status:
+        base = base.where(Order.status == order_status)
+
+    count_q = select(func.count()).select_from(base.subquery())
+    total = (await db.execute(count_q)).scalar() or 0
+
+    result = await db.execute(
+        base.order_by(Order.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+    )
+    orders = result.unique().scalars().all()
+
+    items = []
+    for o in orders:
+        items.append({
+            "id": str(o.id),
+            "user_id": str(o.user_id),
+            "status": o.status,
+            "subtotal": float(o.subtotal),
+            "discount": float(o.discount),
+            "total": float(o.total),
+            "items": [
+                {
+                    "id": str(i.id),
+                    "product_name": i.product_name,
+                    "quantity": i.quantity,
+                    "unit_price": float(i.unit_price),
+                    "line_total": float(i.line_total),
+                }
+                for i in (o.items or [])
+            ],
+            "created_at": o.created_at.isoformat(),
+            "updated_at": o.updated_at.isoformat(),
+        })
+
+    return PaginatedResponse(
+        items=items, total=total, page=page,
+        pages=ceil(total / limit) if total else 1,
+    )
+
+
+@router.patch("/orders/{order_id}/status")
+async def update_shop_order_status(
+    order_id: uuid.UUID,
+    status: str = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_shop_admin),
+):
+    await _get_owned_shop(current_user, db)
+    order = await db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = status
+    await db.commit()
+    return {"id": str(order.id), "status": order.status}

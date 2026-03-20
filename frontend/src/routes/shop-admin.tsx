@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, redirect, Link, useLocation } from '@tanstack/react-router'
 import { userQueryOptions } from '#/lib/auth'
-import { LayoutDashboard, Package, Tag } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, Tag } from 'lucide-react'
 
 export const Route = createFileRoute('/shop-admin')({
   beforeLoad: async ({ context }) => {
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/shop-admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/shop-admin/products', label: 'Products', icon: Package },
   { to: '/shop-admin/coupons', label: 'Coupons', icon: Tag },
+  { to: '/shop-admin/orders', label: 'Orders', icon: ShoppingBag },
 ]
 
 function ShopAdminLayout() {

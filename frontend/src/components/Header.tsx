@@ -1,10 +1,19 @@
 import { Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { ShoppingCart } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import UserMenu from './UserMenu'
 import { useAuth } from '#/lib/auth'
+import { cartQueryOptions } from '#/lib/queries'
 
 export default function Header() {
   const { user } = useAuth()
+  const { data: cart } = useQuery({
+    ...cartQueryOptions(),
+    enabled: !!user,
+  })
+  const cartCount = cart?.item_count ?? 0
+
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
       <nav className="page-wrap flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:py-4">
@@ -19,6 +28,19 @@ export default function Header() {
         </h2>
 
         <div className="ml-auto flex items-center gap-1.5 sm:ml-0 sm:gap-2">
+          {user && (
+            <Link
+              to="/cart"
+              className="relative rounded-md p-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-teal-600 px-1 text-[10px] font-bold text-white">
+                  {cartCount > 99 ? '99+' : cartCount}
+                </span>
+              )}
+            </Link>
+          )}
           <ThemeToggle />
           <UserMenu />
         </div>
